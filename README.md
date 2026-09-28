@@ -31,3 +31,4 @@ El script procesa únicamente archivos sueltos en el directorio raíz configurad
 * *Librerías Estándar (No requieren instalación externa):*
   * 'os': Para manipular rutas, listar directorios y crear carpetas, conectando el código con el sistema operativo.
   * 'shutil': Para transferir, mover archivos y comprimir carpetas enteras.
+  * 'TKinter': Para el desarrollo de la interfaz de usuario.
