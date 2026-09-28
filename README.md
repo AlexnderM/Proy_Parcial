@@ -2,9 +2,9 @@
 Este proyecto consiste en una herramienta de automatización en Python diseñada para escanear una carpeta específica y clasificar sus archivos en subcarpetas organizadas según el tipo o extensión del archivo.
 
 ## Desarrolladores del proyecto
-Alexander Madrid
-Noriel Cortes
-Deysi Quintero
+* Alexander Madrid
+* Noriel Cortes
+* Deysi Quintero
 
 ## Especificaciones del proyecto
 El script procesa únicamente archivos sueltos en el directorio raíz configurado, omitiendo carpetas existentes para evitar bucles o alteraciones en la estructura interna de otros proyectos. Utiliza exclusivamente módulos nativos de Python, asegurando una ejecución ligera sin dependencias externas.
