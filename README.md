@@ -1,11 +1,11 @@
 # Sudoku
 
-Juego de Sudoku clásico (tablero de 9x9) en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada, resolver el tablero automáticamente y competir en una tabla de clasificación por jugador y dificultad.
+Juego de Sudoku clásico en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada, resolver el tablero automáticamente y competir en una tabla de clasificación por jugador y dificultad.
 
 ## Desarrolladores del proyecto
-- [Nombre 1]
-- [Nombre 2]
-- [Nombre 3]
+- Alexander Madrid
+- Noriel Cortes
+- Deysi Quintero
 
 ## Especificaciones del proyecto
 El juego genera un tablero válido con solución única, oculta una cantidad de casillas según la dificultad elegida y valida cada número que el jugador ingresa según las reglas del Sudoku. Utiliza únicamente módulos nativos de Python, por lo que no requiere instalar dependencias externas.
@@ -75,6 +75,7 @@ puntaje = base_dificultad - (segundos // 10) - (errores * 20) - (pistas * 30)
   * `time`: Para medir el tiempo de la partida.
   * `json`: Para guardar y leer la clasificación en `clasificacion.json`.
   * `datetime`: Para registrar la fecha de cada partida.
+  * `TKinter`: Desarrollo de la interfaz gráfica.
 
 ## Instalación y uso
 1. Clonar o descargar el proyecto.
