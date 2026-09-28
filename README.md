@@ -1,34 +1,74 @@
-# Organizador automatico de archivos
-Este proyecto consiste en una herramienta de automatización en Python diseñada para escanear una carpeta específica y clasificar sus archivos en subcarpetas organizadas según el tipo o extensión del archivo.
+# Sudoku
+
+Juego de Sudoku clásico (tablero de 9x9) en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada y resolver el tablero automáticamente.
 
 ## Desarrolladores del proyecto
-* Alexander Madrid
-* Noriel Cortes
-* Deysi Quintero
+- [Nombre 1]
+- [Nombre 2]
+- [Nombre 3]
 
 ## Especificaciones del proyecto
-El script procesa únicamente archivos sueltos en el directorio raíz configurado, omitiendo carpetas existentes para evitar bucles o alteraciones en la estructura interna de otros proyectos. Utiliza exclusivamente módulos nativos de Python, asegurando una ejecución ligera sin dependencias externas.
+El juego genera un tablero válido con solución única, oculta una cantidad de casillas según la dificultad elegida y valida cada número que el jugador ingresa según las reglas del Sudoku. Utiliza únicamente módulos nativos de Python, por lo que no requiere instalar dependencias externas.
 
-### Categorias de Organización por Defecto
-* *Documentos:* '.pdf', '.docx', '.doc', '.txt', '.xlsx', 'pptx', '.csv'
-* *Imágenes:* '.jpg', '.jpeg', '.png', '.gif', '.svg', '.bmp'
-* *Audio:* '.mp3', '.wav', '.m4a', '.flac'
-* *Videos:* '.mp4', '.mkv', '.mov', '.avi'
-* *Archivos Comprimidos:* '.zip', '.rar', '.tar', '.gz'
+### Reglas del juego
+* Cada fila debe contener los números del 1 al 9 sin repetir.
+* Cada columna debe contener los números del 1 al 9 sin repetir.
+* Cada subcuadrícula de 3x3 debe contener los números del 1 al 9 sin repetir.
+* Las casillas iniciales (pistas) no se pueden modificar.
+
+### Niveles de dificultad
+* *Fácil:* 40 casillas visibles
+* *Medio:* 32 casillas visibles
+* *Difícil:* 25 casillas visibles
 
 ## Requisitos Funcionales
-* *Lectura de ruta:* El sistema debe permitir especificar o configurar la ruta de la carpeta que se desea organizar.
-* *Identificación de extensiones:* El programa debe leer la extensión de cada archivo presente en el directorio configurado de forma precisa.
-* *Clasificación por categorías:* El sistema debe asociar cada extensión detectada con su grupo lógico correspondiente (ej. Imágenes, Documentos).
-* *Creación automática de carpetas:* El programa debe verificar si las carpetas de destino existen; si no, debe crearlas automáticamente antes de mover los archivos.
-* *Transferencia de archivos:* El script debe mover de forma segura cada archivo desde la carpeta origen hacia su carpeta destino sin corromper el contenido.
-* *Control de duplicados:* Si un archivo con el mismo nombre ya existe en el destino, el sistema debe renombrar el nuevo archivo añadiendo un sufijo numérico (ej. 'archivo(1).pdf') para evitar la pérdida de datos por sobrescritura.
-* *Ignorar subcarpetas:* El script debe procesar únicamente archivos sueltos e ignorar las subcarpetas ya existentes en el directorio de origen.
-* *Reporte de ejecución:* Al finalizar, el programa debe mostrar un resumen en la consola indicando la cantidad total de archivos organizados con éxito.
+* *Generación de tablero:* El sistema debe generar un tablero de Sudoku válido y completo en cada partida.
+* *Selección de dificultad:* El jugador debe poder elegir el nivel (fácil, medio o difícil) antes de iniciar.
+* *Visualización:* El programa debe mostrar el tablero en consola, separando claramente las subcuadrículas de 3x3.
+* *Ingreso de jugadas:* El jugador debe poder colocar un número indicando fila, columna y valor.
+* *Validación de jugadas:* El sistema debe rechazar los números que repitan valor en la fila, columna o subcuadrícula, e informar el motivo.
+* *Protección de pistas:* El programa no debe permitir modificar las casillas iniciales.
+* *Borrado de números:* El jugador debe poder borrar un número que colocó.
+* *Pistas de ayuda:* El jugador debe poder pedir que se revele una casilla.
+* *Resolución automática:* El sistema debe poder resolver el tablero por backtracking.
+* *Detección de victoria:* Al completar el tablero correctamente, el programa debe mostrar un mensaje de felicitación y el tiempo de juego.
 
 ## Tecnologías y Requisitos del Entorno
 * *Lenguaje:* Python 3.14
 * *Librerías Estándar (No requieren instalación externa):*
-  * 'os': Para manipular rutas, listar directorios y crear carpetas, conectando el código con el sistema operativo.
-  * 'shutil': Para transferir, mover archivos y comprimir carpetas enteras.
-  * 'TKinter': Para el desarrollo de la interfaz de usuario.
+  * `random`: Para generar tableros distintos en cada partida.
+  * `copy`: Para duplicar el tablero (solución y tablero de juego).
+  * `time`: Para medir el tiempo de la partida.
+
+## Instalación y uso
+1. Clonar o descargar el proyecto.
+2. Abrir una terminal en la carpeta del proyecto.
+3. Ejecutar:
+   ```bash
+   python sudoku.py
+   ```
+4. Elegir la dificultad y jugar siguiendo las instrucciones en pantalla.
+
+## Ejemplo de tablero
+```
++-------+-------+-------+
+| 5 3 . | . 7 . | . . . |
+| 6 . . | 1 9 5 | . . . |
+| . 9 8 | . . . | . 6 . |
++-------+-------+-------+
+| 8 . . | . 6 . | . . 3 |
+| 4 . . | 8 . 3 | . . 1 |
+| 7 . . | . 2 . | . . 6 |
++-------+-------+-------+
+| . 6 . | . . . | 2 8 . |
+| . . . | 4 1 9 | . . 5 |
+| . . . | . 8 . | . 7 9 |
++-------+-------+-------+
+```
+
+## Estructura del proyecto
+```
+Sudoku/
+├── sudoku.py
+└── README.md
+```
