@@ -1,6 +1,6 @@
 # Sudoku
 
-Juego de Sudoku clásico (tablero de 9x9) en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada y resolver el tablero automáticamente.
+Juego de Sudoku clásico (tablero de 9x9) en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada, resolver el tablero automáticamente y competir en una tabla de clasificación por jugador y dificultad.
 
 ## Desarrolladores del proyecto
 - [Nombre 1]
@@ -32,6 +32,40 @@ El juego genera un tablero válido con solución única, oculta una cantidad de 
 * *Pistas de ayuda:* El jugador debe poder pedir que se revele una casilla.
 * *Resolución automática:* El sistema debe poder resolver el tablero por backtracking.
 * *Detección de victoria:* Al completar el tablero correctamente, el programa debe mostrar un mensaje de felicitación y el tiempo de juego.
+* *Registro de jugadores:* Al iniciar, el jugador debe ingresar su nombre o alias para asociar sus partidas.
+* *Guardado de resultados:* Al ganar, el sistema debe guardar nombre, dificultad, tiempo, errores, pistas usadas y fecha.
+* *Tabla de clasificación:* El programa debe mostrar el Top 10 por dificultad, ordenado del mejor al peor resultado.
+* *Estadísticas personales:* El jugador debe poder consultar sus partidas jugadas, ganadas, mejor tiempo y promedio.
+* *Persistencia:* Los resultados deben conservarse entre sesiones en un archivo local.
+
+## Sistema de Clasificación
+Cada partida ganada suma un puntaje. La tabla se ordena por puntaje (de mayor a menor) y, en caso de empate, por menor tiempo.
+
+### Cálculo del puntaje
+```
+puntaje = base_dificultad - (segundos // 10) - (errores * 20) - (pistas * 30)
+```
+* *Base por dificultad:* Fácil 500, Medio 1000, Difícil 1500.
+* *Penalizaciones:* tiempo empleado, errores cometidos y pistas usadas.
+* *Mínimo:* el puntaje nunca baja de 0.
+* *Resolución automática:* si el jugador usa "resolver", la partida no entra en la clasificación.
+
+### Ejemplo de tabla
+```
+=== TOP 10 - DIFÍCIL ===
+ #  Jugador     Puntaje   Tiempo   Errores  Pistas  Fecha
+ 1  Noriel        1180    08:45       1       0     2026-09-28
+ 2  Deysi         1090    10:12       2       1     2026-09-27
+ 3  Alexander      950    12:30       3       1     2026-09-26
+```
+
+### Menú principal
+```
+1. Nueva partida
+2. Ver clasificación
+3. Mis estadísticas
+4. Salir
+```
 
 ## Tecnologías y Requisitos del Entorno
 * *Lenguaje:* Python 3.14
@@ -39,6 +73,8 @@ El juego genera un tablero válido con solución única, oculta una cantidad de 
   * `random`: Para generar tableros distintos en cada partida.
   * `copy`: Para duplicar el tablero (solución y tablero de juego).
   * `time`: Para medir el tiempo de la partida.
+  * `json`: Para guardar y leer la clasificación en `clasificacion.json`.
+  * `datetime`: Para registrar la fecha de cada partida.
 
 ## Instalación y uso
 1. Clonar o descargar el proyecto.
@@ -70,5 +106,6 @@ El juego genera un tablero válido con solución única, oculta una cantidad de 
 ```
 Sudoku/
 ├── sudoku.py
+├── clasificacion.json   (se crea automáticamente)
 └── README.md
 ```
