@@ -244,21 +244,7 @@ class SudokuView(tk.Tk):
         self.lbl_errores.pack(side="left")
         self.lbl_pistas = tk.Label(frame_contadores, text="Pistas: 0/3", font=("Helvetica", 11, "bold"), fg="#17b978", padx=15)
         self.lbl_pistas.pack(side="left")
-        frame_tablero_borde = tk.Frame(self, bg="black", bd=2)
-        frame_tablero_borde.pack(pady=10)
-
-
-        self.celdas_ui = {}
-        for b_f in range(3):
-            for b_c in range(3):
-                subcuadrante = tk.Frame(frame_tablero_borde, bg="white", highlightbackground="black", highlightthickness=1, bd=1)
-                subcuadrante.grid(row=b_f, column=b_c, padx=1, pady=1)
         
-                for f in range(3):
-                    for c in range(3):
-                        fila_real = b_f * 3 + f
-                        col_real = b_c * 3 + c
-
         frame_tablero_borde = tk.Frame(self, bg="black", bd=2)
         frame_tablero_borde.pack(pady=10)
 
