@@ -1,7 +1,1 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Soporte y Dudas del Proyecto Sudoku
-    url: https://github.com/AlexnderM/Proy_Parcial/issues
-    about: Utiliza este enlace si tienes dudas sobre la arquitectura MVC, los issues o la ejecución del programa.
-# Etiquetas sugeridas para el equipo (Alexander Madrid, Noriel Cortes, Deysi Quintero)
-# Etiquetas mínimas recomendadas: defecto, funcionalidad, documentación, calidad, prioridad-alta
+
