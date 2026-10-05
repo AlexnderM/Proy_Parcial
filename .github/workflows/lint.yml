@@ -1,0 +1,25 @@
+name: CI Code Quality (Ruff)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Ruff
+        run: pip install ruff
+
+      - name: Analizar estilo y errores de código
+        run: |
+          ruff check .
