@@ -1,2 +1,4 @@
 python_version >= "3.10"
-ruff
+
+# Dependencias principales y herramientas de calidad de código
+ruff>=0.1.0
