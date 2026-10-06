@@ -8,7 +8,7 @@ import copy
 import json
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class SudokuModel:
@@ -155,7 +155,7 @@ class SudokuModel:
             "tiempo_segundos": segundos,
             "errores": self.errores,
             "pistas_usadas": self.pistas_usadas,
-            "fecha": datetime.now().strftime("%Y-%m-%d"),
+            "fecha": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             "resuelto_auto": False
         }
 
@@ -164,8 +164,8 @@ class SudokuModel:
             try:
                 with open(self.archivo_json, "r", encoding="utf-8") as f:
                     datos = json.load(f)
-            except Exception:
-                pass
+            except Exception(FileNotFoundError, json.JSONDecodeError, KeyError):
+                datos = {"historial": []}
 
         datos["historial"].append(nueva_partida)
 
@@ -191,7 +191,7 @@ class SudokuModel:
             filtrados = [p for p in historial if p["dificultad"] == dificultad and not p.get("resuelto_auto", False)]
             filtrados.sort(key=lambda x: (-x["puntaje"], x["tiempo_segundos"]))
             return filtrados[:10]
-        except Exception:
+        except Exception(FileNotFoundError, json.JSONDecodeError, KeyError):
             return []
 
     def obtener_estadisticas_personales(self, jugador):
@@ -225,7 +225,7 @@ class SudokuModel:
                 "mejor_tiempo": mejor_tiempo,
                 "promedio_errores": promedio_errores
             }
-        except Exception:
+        except Exception(FileNotFoundError, json.JSONDecodeError, KeyError, ZeroDivisionError):
             return None
 
     def es_conflicto_visual(self, fila, col, num):
