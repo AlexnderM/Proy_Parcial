@@ -1,112 +1,81 @@
-# Sudoku
+# Sudoku Clásico - Python GUI (MVC)
 
-Juego de Sudoku clásico en Python. Permite generar tableros con distintos niveles de dificultad, jugar validando cada jugada, resolver el tablero automáticamente y competir en una tabla de clasificación por jugador y dificultad.
+Aplicación interactiva de Sudoku desarrollada en Python utilizando Tkinter para la interfaz gráfica. El proyecto implementa una arquitectura Modelo-Vista-Controlador (MVC), algoritmos de Backtracking para la generación y resolución de tableros, y un flujo de Integración Continua (CI/CD) mediante GitHub Actions.
 
-## Desarrolladores del proyecto
-- Alexander Madrid
-- Noriel Cortes
-- Deysi Quintero
+# Integrantes del Equipo
 
-## Especificaciones del proyecto
-El juego genera un tablero válido con solución única, oculta una cantidad de casillas según la dificultad elegida y valida cada número que el jugador ingresa según las reglas del Sudoku. Utiliza únicamente módulos nativos de Python, por lo que no requiere instalar dependencias externas.
+Alexander Madrid.
 
-### Reglas del juego
-* Cada fila debe contener los números del 1 al 9 sin repetir.
-* Cada columna debe contener los números del 1 al 9 sin repetir.
-* Cada subcuadrícula de 3x3 debe contener los números del 1 al 9 sin repetir.
-* Las casillas iniciales (pistas) no se pueden modificar.
+Noriel Cortés
 
-### Niveles de dificultad
-* *Fácil:* 40 casillas visibles
-* *Medio:* 32 casillas visibles
-* *Difícil:* 25 casillas visibles
+Deysi Quintero.
 
-## Requisitos Funcionales
-* *Generación de tablero:* El sistema debe generar un tablero de Sudoku válido y completo en cada partida.
-* *Selección de dificultad:* El jugador debe poder elegir el nivel (fácil, medio o difícil) antes de iniciar.
-* *Visualización:* El programa debe mostrar el tablero en consola, separando claramente las subcuadrículas de 3x3.
-* *Ingreso de jugadas:* El jugador debe poder colocar un número indicando fila, columna y valor.
-* *Validación de jugadas:* El sistema debe rechazar los números que repitan valor en la fila, columna o subcuadrícula, e informar el motivo.
-* *Protección de pistas:* El programa no debe permitir modificar las casillas iniciales.
-* *Borrado de números:* El jugador debe poder borrar un número que colocó.
-* *Pistas de ayuda:* El jugador debe poder pedir que se revele una casilla.
-* *Resolución automática:* El sistema debe poder resolver el tablero por backtracking.
-* *Detección de victoria:* Al completar el tablero correctamente, el programa debe mostrar un mensaje de felicitación y el tiempo de juego.
-* *Registro de jugadores:* Al iniciar, el jugador debe ingresar su nombre o alias para asociar sus partidas.
-* *Guardado de resultados:* Al ganar, el sistema debe guardar nombre, dificultad, tiempo, errores, pistas usadas y fecha.
-* *Tabla de clasificación:* El programa debe mostrar el Top 10 por dificultad, ordenado del mejor al peor resultado.
-* *Estadísticas personales:* El jugador debe poder consultar sus partidas jugadas, ganadas, mejor tiempo y promedio.
-* *Persistencia:* Los resultados deben conservarse entre sesiones en un archivo local.
+# Características Principales
 
-## Sistema de Clasificación
-Cada partida ganada suma un puntaje. La tabla se ordena por puntaje (de mayor a menor) y, en caso de empate, por menor tiempo.
+Arquitectura MVC: Separación clara entre la lógica del juego (model.py), la interfaz de usuario (view.py) y el flujo de control (controller.py), inicializados desde main.py.
 
-### Cálculo del puntaje
-```
-puntaje = base_dificultad - (segundos // 10) - (errores * 20) - (pistas * 30)
-```
-* *Base por dificultad:* Fácil 500, Medio 1000, Difícil 1500.
-* *Penalizaciones:* tiempo empleado, errores cometidos y pistas usadas.
-* *Mínimo:* el puntaje nunca baja de 0.
-* *Resolución automática:* si el jugador usa "resolver", la partida no entra en la clasificación.
+Algoritmo de Backtracking: Generación aleatoria de soluciones válidas e integración de una función para resolver automáticamente el juego.
 
-### Ejemplo de tabla
-```
-=== TOP 10 - DIFÍCIL ===
- #  Jugador     Puntaje   Tiempo   Errores  Pistas  Fecha
- 1  Noriel        1180    08:45       1       0     2026-09-28
- 2  Deysi         1090    10:12       2       1     2026-09-27
- 3  Alexander      950    12:30       3       1     2026-09-26
-```
+Niveles de Dificultad: Opciones de juego en niveles Fácil (40 celdas visibles), Medio (32 celdas visibles) y Difícil (25 celdas visibles).
 
-### Menú principal
-```
-1. Nueva partida
-2. Ver clasificación
-3. Mis estadísticas
-4. Salir
-```
+Validación en Tiempo Real: Detección de conflictos en filas, columnas y subcuadrículas de 3x3 con marcas de error visuales y límite de 5 fallos.
 
-## Tecnologías y Requisitos del Entorno
-* *Lenguaje:* Python 3.14
-* *Librerías Estándar (No requieren instalación externa):*
-  * `random`: Para generar tableros distintos en cada partida.
-  * `copy`: Para duplicar el tablero (solución y tablero de juego).
-  * `time`: Para medir el tiempo de la partida.
-  * `json`: Para guardar y leer la clasificación en `clasificacion.json`.
-  * `datetime`: Para registrar la fecha de cada partida.
-  * `TKinter`: Desarrollo de la interfaz gráfica.
+Sistema de Ayudas: Hasta 3 pistas automáticas por partida.
 
-## Instalación y uso
-1. Clonar o descargar el proyecto.
-2. Abrir una terminal en la carpeta del proyecto.
-3. Ejecutar:
-   ```bash
-   python sudoku.py
-   ```
-4. Elegir la dificultad y jugar siguiendo las instrucciones en pantalla.
+Cronómetro y Puntuación: Registro de tiempo transcurrido y cálculo de puntaje en función de la dificultad, tiempo y errores cometidos.
 
-## Ejemplo de tablero
-```
-+-------+-------+-------+
-| 5 3 . | . 7 . | . . . |
-| 6 . . | 1 9 5 | . . . |
-| . 9 8 | . . . | . 6 . |
-+-------+-------+-------+
-| 8 . . | . 6 . | . . 3 |
-| 4 . . | 8 . 3 | . . 1 |
-| 7 . . | . 2 . | . . 6 |
-+-------+-------+-------+
-| . 6 . | . . . | 2 8 . |
-| . . . | 4 1 9 | . . 5 |
-| . . . | . 8 . | . 7 9 |
-+-------+-------+-------+
-```
+Persistencia de Datos (JSON): Guardado automático de partidas completadas para la consulta de Top 10 (Clasificación) y Estadísticas Personales.
 
-## Estructura del proyecto
-```
-Sudoku/
-├── sudoku.py
-├── clasificacion.json   (se crea automáticamente)
-└── README.md
-```
+# Estructura del Proyecto
+
+Proy_Parcial/
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml          # Workflow de pruebas y compilación
+│       └── lint.yml        # Workflow de análisis de estilo con Ruff
+│
+├── docs/                   # Documentación adicional del proyecto
+├── .env.example            # Ejemplo de variables de entorno
+├── .gitignore              # Archivos ignorados por Git
+├── controller.py           # Controlador: Maneja eventos e interactúa con la Vista y el Modelo
+├── main.py                 # Punto de entrada principal para ejecutar la aplicación
+├── model.py                # Modelo: Lógica de negocio, Backtracking y persistencia JSON
+├── view.py                 # Vista: Interfaz gráfica desarrollada con Tkinter
+├── requirements.txt        # Dependencias del proyecto
+└── README.md               # Documentación general del proyecto
+
+
+# Requisitos de Instalación
+
+Python: Versión 3.10 o superior.
+
+Tkinter: Generalmente incluido en las instalaciones estándar de Python para Windows y macOS.
+
+# Ejecución del Proyecto
+
+Clonar el repositorio:
+
+git clone https://github.com/AlexnderM/Proy_Parcial.git
+cd Proy_Parcial
+
+
+Ejecutar la aplicación:
+Ejecuta el archivo principal como punto de entrada:
+
+python main.py
+
+
+(En Windows, si la variable de entorno no está configurada en PowerShell, puedes usar py main.py o la ruta directa de tu ejecutable de Python).
+
+# Integración Continua (CI/CD) y Calidad de Código
+
+El repositorio cuenta con automatización en GitHub Actions para garantizar los estándares de calidad de software:
+
+Sintaxis y Compilación (ci.yml): Valida que el proyecto no contenga errores de ejecución fundamentales en entornos de integración.
+
+Análisis Estático de Código (lint.yml): Utiliza Ruff para forzar el cumplimiento de buenas prácticas de estilo en Python (PEP 8), manejo adecuado de zonas horarias (datetime.timezone), excepciones explícitas e importaciones limpias.
+
+# Licencia
+
+Proyecto desarrollado para fines académicos en la materia de Desarrollo de Software.
