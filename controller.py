@@ -1,36 +1,63 @@
-import time
-import random
+"""Módulo controlador para el juego Sudoku.
+
+Coordina la interacción entre el modelo de datos (SudokuModel) y la interfaz
+gráfica (SudokuView), gestionando el ciclo de vida de las partidas, cronómetro,
+validaciones en tiempo real, eventos de usuario y ventanas emergentes.
+"""
+
 import copy
+import random
+import time
 import tkinter as tk
 from tkinter import messagebox
+
 from model import SudokuModel
 from view import SudokuView
 
+
 class SudokuController:
+    """Controlador principal de la arquitectura MVC para la aplicación Sudoku."""
+
     def __init__(self):
+        """Inicializa la instancia del controlador, el modelo, la vista y el estado del juego."""
         self.model = SudokuModel()
         self.view = SudokuView(self)
         self.partida_activa = False
         self.segundos_transcurridos = 0
 
     def iniciar_aplicacion(self):
+        """Arranca el bucle de eventos principal de la interfaz de usuario."""
         self.view.mainloop()
 
     def click_nueva_partida(self):
+        """Gestiona el inicio de una nueva partida validando el nombre del jugador.
+
+        Genera un nuevo tablero según la dificultad seleccionada, reinicia
+        contadores y arranca el cronómetro de la partida.
+        """
         nombre = self.view.entry_jugador.get().strip()
         if not nombre:
-            messagebox.showwarning("Requisito", "Por favor, ingresa tu nombre o alias para jugar.")
+            messagebox.showwarning(
+                "Requisito", "Por favor, ingresa tu nombre o alias para jugar."
+            )
             return
+
         self.model.generar_nuevo_tablero(self.view.var_dificultad.get())
         self.model.jugador_actual = nombre
         self.partida_activa = True
         self.segundos_transcurridos = 0
-        self.view.crear_interfaz_juego(self.model.jugador_actual, self.model.dificultad_actual)
-        self.view.actualizar_tablero_interfaz(self.model.matriz_juego, self.model.matriz_pistas)
+
+        self.view.crear_interfaz_juego(
+            self.model.jugador_actual, self.model.dificultad_actual
+        )
+        self.view.actualizar_tablero_interfaz(
+            self.model.matriz_juego, self.model.matriz_pistas
+        )
         self.model.tiempo_inicio = time.time()
         self.actualizar_cronometro()
 
     def actualizar_cronometro(self):
+        """Actualiza en segundo plano el tiempo transcurrido en la interfaz cada segundo."""
         if self.partida_activa:
             self.segundos_transcurridos = int(time.time() - self.model.tiempo_inicio)
             mins = self.segundos_transcurridos // 60
@@ -39,6 +66,16 @@ class SudokuController:
             self.view.after(1000, self.actualizar_cronometro)
 
     def modificar_celda(self, f, c, event):
+        """Maneja el evento de edición de contenido en una celda del tablero.
+
+        Procesa la entrada del usuario, valida si el número genera un conflicto visual,
+        incrementa el contador de errores si aplica y verifica si la partida terminó.
+
+        Args:
+            f (int): Índice de la fila de la celda modificada.
+            c (int): Índice de la columna de la celda modificada.
+            event: Evento de teclado de Tkinter (<KeyRelease>).
+        """
         if not self.partida_activa:
             return
 
@@ -50,7 +87,6 @@ class SudokuController:
             return
 
         num = int(nuevo_valor)
-
         motivo_conflicto = self.model.es_conflicto_visual(f, c, num)
 
         if motivo_conflicto:
@@ -77,50 +113,68 @@ class SudokuController:
         else:
             self.model.matriz_juego[f][c] = num
             self.view.limpiar_error_celda(f, c)
-
             self.verificar_estado_final()
 
-
     def click_pedir_pista(self):
-        if not self.partida_activa: 
+        """Otorga una pista revelando una celda vacía aleatoria con su valor correcto."""
+        if not self.partida_activa:
             return
-          
+
         if self.model.pistas_usadas >= 3:
-            messagebox.showwarning("Límite de Ayudas", "Ya has utilizado tus 3 pistas permitidas para esta partida.")
+            messagebox.showwarning(
+                "Límite de Ayudas",
+                "Ya has utilizado tus 3 pistas permitidas para esta partida.",
+            )
             return
-        
-        celdas_vacias = [(f, c) for f in range(9) for c in range(9) if self.model.matriz_juego[f][c] == 0]
-        if not celdas_vacias: 
+
+        celdas_vacias = [
+            (f, c)
+            for f in range(9)
+            for c in range(9)
+            if self.model.matriz_juego[f][c] == 0
+        ]
+        if not celdas_vacias:
             return
-            
+
         f, c = random.choice(celdas_vacias)
         valor_correcto = self.model.matriz_solucion[f][c]
-        
+
         self.model.matriz_juego[f][c] = valor_correcto
         self.model.matriz_pistas[f][c] = True
         self.model.pistas_usadas += 1
-        
+
         self.view.lbl_pistas.config(text=f"Pistas: {self.model.pistas_usadas}")
-        self.view.actualizar_tablero_interfaz(self.model.matriz_juego, self.model.matriz_pistas)
+        self.view.actualizar_tablero_interfaz(
+            self.model.matriz_juego, self.model.matriz_pistas
+        )
         self.verificar_estado_final()
 
-
     def click_auto_resolver(self):
-        if not self.partida_activa: 
+        """Resuelve el tablero automáticamente marcando la partida como no elegible para puntos."""
+        if not self.partida_activa:
             return
+
         self.model.resuelto_auto = True
         self.model.matriz_juego = copy.deepcopy(self.model.matriz_solucion)
-        self.view.actualizar_tablero_interfaz(self.model.matriz_juego, self.model.matriz_pistas)
+        self.view.actualizar_tablero_interfaz(
+            self.model.matriz_juego, self.model.matriz_pistas
+        )
         self.partida_activa = False
-        messagebox.showinfo("Resolución Automática", "El sistema ha resuelto el tablero usando Backtracking. Esta partida no sumará puntos.")
+        messagebox.showinfo(
+            "Resolución Automática",
+            "El sistema ha resuelto el tablero usando Backtracking. Esta partida no sumará puntos.",
+        )
 
     def verificar_estado_final(self):
+        """Comprueba si el jugador ha completado con éxito todas las celdas del tablero."""
         if self.model.verificar_victoria():
             self.partida_activa = False
             mins = self.segundos_transcurridos // 60
             segs = self.segundos_transcurridos % 60
             tiempo_str = f"{mins:02d}:{segs:02d}"
+
             puntaje = self.model.guardar_resultado(self.segundos_transcurridos)
+
             msg = f"¡Felicidades, {self.model.jugador_actual}! Completaste el Sudoku.\n\n"
             msg += f"Dificultad: {self.model.dificultad_actual}\n"
             msg += f"Tiempo de Juego: {tiempo_str}\n"
@@ -128,49 +182,64 @@ class SudokuController:
             msg += f"Pistas de ayuda usadas: {self.model.pistas_usadas}\n"
             if puntaje is not None:
                 msg += f"Puntaje obtenido: {puntaje} pts\n"
+
             messagebox.showinfo("¡Victoria!", msg)
             self.view.crear_interfaz_menu()
 
     def click_ver_clasificacion(self):
+        """Despliega una ventana emergente con el Top 10 de puntuaciones para la dificultad seleccionada."""
         dificultad = self.view.var_dificultad.get()
         top_10 = self.model.obtener_top_10(dificultad)
+
         ventana_top = tk.Toplevel(self.view)
         ventana_top.title(f"TOP 10 - {dificultad.upper()}")
         ventana_top.geometry("450x320")
         ventana_top.resizable(False, False)
-            
-        lbl_t = tk.Label(ventana_top, text=f"=== TOP 10 - {dificultad.upper()} ===", font=("Courier", 12, "bold"), pady=10)
+
+        lbl_t = tk.Label(
+            ventana_top,
+            text=f"=== TOP 10 - {dificultad.upper()} ===",
+            font=("Courier", 12, "bold"),
+            pady=10,
+        )
         lbl_t.pack()
-            
+
         txt_area = tk.Text(ventana_top, font=("Courier", 10), width=52, height=12)
         txt_area.pack(pady=5)
-            
+
         header = f"{'#':<3}{'Jugador':<12}{'Puntaje':<9}{'Tiempo':<9}{'Errores':<9}{'Pistas':<8}\n"
         txt_area.insert(tk.END, header)
-        txt_area.insert(tk.END, "-"*52 + "\n")
-            
+        txt_area.insert(tk.END, "-" * 52 + "\n")
+
         for idx, p in enumerate(top_10, 1):
-            m, s = p['tiempo_segundos'] // 60, p['tiempo_segundos'] % 60
+            m, s = p["tiempo_segundos"] // 60, p["tiempo_segundos"] % 60
             t_str = f"{m:02d}:{s:02d}"
             fila = f"{idx:<3}{p['jugador'][:10]:<12}{p['puntaje']:<9}{t_str:<9}{p['errores']:<9}{p['pistas_usadas']:<8}\n"
             txt_area.insert(tk.END, fila)
-                
+
         txt_area.config(state="disabled")
 
     def click_mis_estadisticas(self):
+        """Muestra en un cuadro de diálogo el historial estadístico del usuario en el sistema."""
         nombre = self.view.entry_jugador.get().strip()
         if not nombre:
-            messagebox.showwarning("Requisito", "Ingresa un nombre en el campo para consultar tus estadísticas.")
+            messagebox.showwarning(
+                "Requisito",
+                "Ingresa un nombre en el campo para consultar tus estadísticas.",
+            )
             return
-            
+
         stats = self.model.obtener_estadisticas_personales(nombre)
         if not stats:
-            messagebox.showinfo("Estadísticas", f"No se encontraron registros activos para el jugador: '{nombre}'")
+            messagebox.showinfo(
+                "Estadísticas",
+                f"No se encontraron registros activos para el jugador: '{nombre}'",
+            )
             return
-            
-        m, s = stats['mejor_tiempo'] // 60, stats['mejor_tiempo'] % 60
-        t_str = f"{m:02d}:{s:02d}" if stats['mejor_tiempo'] > 0 else "N/A"
-        
+
+        m, s = stats["mejor_tiempo"] // 60, stats["mejor_tiempo"] % 60
+        t_str = f"{m:02d}:{s:02d}" if stats["mejor_tiempo"] > 0 else "N/A"
+
         msg = f"=== ESTADÍSTICAS DE {nombre.upper()} ===\n\n"
         msg += f"• Partidas jugadas: {stats['jugadas']}\n"
         msg += f"• Partidas ganadas legítimamente: {stats['ganadas']}\n"
