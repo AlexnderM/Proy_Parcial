@@ -4,13 +4,19 @@ Inicializa el controlador del juego y arranca el bucle principal
 de la interfaz de usuario.
 """
 
-from controller import SudokuController
+from sudoku.controller import SudokuController
+from sudoku.model import SudokuModel
+from sudoku.view import SudokuView
 
 
 def main():
     """Punto de entrada principal que instancia y ejecuta la aplicación."""
-    app = SudokuController()
-    app.iniciar_aplicacion()
+    model = SudokuModel()
+    controller = SudokuController(model, None)
+    view = SudokuView(controlador=controller)
+    controller.view = view
+    
+    view.mainloop()
 
 
 if __name__ == "__main__":
