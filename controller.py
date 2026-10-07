@@ -65,36 +65,32 @@ class SudokuController:
             self.view.lbl_tiempo.config(text=f"Tiempo: {mins:02d}:{segs:02d}")
             self.view.after(1000, self.actualizar_cronometro)
 
+
     def modificar_celda(self, f, c, event):
-        """Maneja el evento de edición de contenido en una celda del tablero.
-
-        Procesa la entrada del usuario, valida si el número genera un conflicto visual,
-        incrementa el contador de errores si aplica y verifica si la partida terminó.
-
-        Args:
-            f (int): Índice de la fila de la celda modificada.
-            c (int): Índice de la columna de la celda modificada.
-            event: Evento de teclado de Tkinter (<KeyRelease>).
-        """
+        """Maneja el evento de edición de contenido en una celda del tablero."""
         if not self.partida_activa:
             return
 
         nuevo_valor = self.view.celdas_ui[(f, c)].get().strip()
 
+        # Si se borra la celda
         if nuevo_valor == "":
             self.model.matriz_juego[f][c] = 0
             self.view.limpiar_error_celda(f, c)
             return
 
-        num = int(nuevo_valor)
-        motivo_conflicto = self.model.es_conflicto_visual(f, c, num)
+        if not nuevo_valor.isdigit():
+            return
 
-        if motivo_conflicto:
+        num = int(nuevo_valor)
+
+        # Validar contra la matriz solución
+        if not self.model.es_numero_correcto(f, c, num):
             self.model.errores += 1
             self.view.lbl_errores.config(
                 text=f"Errores: {self.model.errores}/5"
             )
-            self.view.mostrar_error_celda(f, c)
+            self.view.mostrar_error_celda(f, c)  # Pone el texto/borde en rojo
             self.model.matriz_juego[f][c] = 0
 
             if self.model.errores >= 5:
@@ -104,17 +100,11 @@ class SudokuController:
                     "Has cometido 5 errores. Has perdido la partida.",
                 )
                 self.view.crear_interfaz_menu()
-                return
-
-            messagebox.showerror(
-                "Movimiento Inválido",
-                f"El número {num} ya existe en la {motivo_conflicto}.",
-            )
         else:
             self.model.matriz_juego[f][c] = num
             self.view.limpiar_error_celda(f, c)
             self.verificar_estado_final()
-
+    
     def click_pedir_pista(self):
         """Otorga una pista revelando una celda vacía aleatoria con su valor correcto."""
         if not self.partida_activa:
