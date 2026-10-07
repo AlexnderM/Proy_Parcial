@@ -107,6 +107,19 @@ class SudokuModel:
                 if self.matriz_juego[f][c] != 0:
                     self.matriz_pistas[f][c] = True
 
+    def es_numero_correcto(self, f: int, c: int, valor: int) -> bool:
+        """Verifica si el número ingresado en la posición (f, c) coincide con la matriz solución.
+
+        Args:
+            f (int): Índice de la fila.
+            c (int): Índice de la columna.
+            valor (int): Número a verificar.
+
+        Returns:
+            bool: True si coincide con la solución, False en caso contrario.
+        """
+        return self.matriz_solucion[f][c] == valor
+    
     def verificar_victoria(self):
         """Verifica si el tablero está lleno y sin conflictos visuales.
 
