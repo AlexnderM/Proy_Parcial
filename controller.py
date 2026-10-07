@@ -4,8 +4,8 @@ Coordina la interacción entre el modelo de datos (SudokuModel) y la interfaz
 gráfica (SudokuView), gestionando el ciclo de vida de las partidas, cronómetro,
 validaciones en tiempo real, eventos de usuario y ventanas emergentes.
 """
-
 import copy
+import json
 import random
 import time
 import tkinter as tk
@@ -164,6 +164,61 @@ class SudokuController:
             "Resolución Automática",
             "El sistema ha resuelto el tablero usando Backtracking. Esta partida no sumará puntos.",
         )
+
+    def guardar_partida(self, filepath="partida_guardada.json"):
+        """Serializa y guarda el estado actual del juego en un archivo JSON."""
+        try:
+            estado_juego = {
+                "jugador": self.model.jugador_actual,
+                "dificultad": self.model.dificultad_actual,
+                "matriz_juego": self.model.matriz_juego,
+                "matriz_solucion": self.model.matriz_solucion,
+                "matriz_pistas": self.model.matriz_pistas,
+                "errores": self.model.errores,
+                "pistas_usadas": self.model.pistas_usadas,
+                "segundos_transcurridos": self.segundos_transcurridos
+            }
+            
+            with open(filepath, "w", encoding="utf-8") as archivo:
+                json.dump(estado_juego, archivo, indent=4)
+                
+            messagebox.showinfo("Guardado Exitoso", "La partida se ha guardado correctamente.")
+        except OSError as e:
+            messagebox.showerror("Error de Guardado", f"No se pudo guardar la partida: {e}")
+
+    def cargar_partida(self, filepath="partida_guardada.json"):
+        """Carga el estado del juego desde un archivo JSON y restaura la interfaz."""
+        try:
+            with open(filepath, "r", encoding="utf-8") as archivo:
+                estado_juego = json.load(archivo)
+                
+            self.model.jugador_actual = estado_juego.get("jugador", "Jugador")
+            self.model.dificultad_actual = estado_juego.get("dificultad", "Facil")
+            self.model.matriz_juego = estado_juego["matriz_juego"]
+            self.model.matriz_solucion = estado_juego["matriz_solucion"]
+            self.model.matriz_pistas = estado_juego["matriz_pistas"]
+            self.model.errores = estado_juego.get("errores", 0)
+            self.model.pistas_usadas = estado_juego.get("pistas_usadas", 0)
+            self.segundos_transcurridos = estado_juego.get("segundos_transcurridos", 0)
+            self.partida_activa = True
+            
+            self.view.crear_interfaz_juego(
+                self.model.jugador_actual, self.model.dificultad_actual
+            )
+            self.view.actualizar_tablero_interfaz(
+                self.model.matriz_juego, self.model.matriz_pistas
+            )
+            self.view.lbl_errores.config(text=f"Errores: {self.model.errores}/5")
+            self.view.lbl_pistas.config(text=f"Pistas: {self.model.pistas_usadas}")
+            
+            self.model.tiempo_inicio = time.time() - self.segundos_transcurridos
+            self.actualizar_cronometro()
+            
+            messagebox.showinfo("Carga Exitosa", "La partida se ha restaurado correctamente.")
+        except FileNotFoundError:
+            messagebox.showwarning("Archivo no encontrado", "No se encontró ninguna partida guardada previa.")
+        except (json.JSONDecodeError, KeyError) as e:
+            messagebox.showerror("Error de Carga", f"El archivo de guardado está dañado o es inválido: {e}")
 
     def verificar_estado_final(self):
         """Comprueba si el jugador ha completado con éxito todas las celdas del tablero."""
