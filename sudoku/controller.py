@@ -11,17 +11,14 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 
-from model import SudokuModel
-from view import SudokuView
-
 
 class SudokuController:
     """Controlador principal de la arquitectura MVC para la aplicación Sudoku."""
 
-    def __init__(self):
+    def __init__(self, model, view):
         """Inicializa la instancia del controlador, el modelo, la vista y el estado del juego."""
-        self.model = SudokuModel()
-        self.view = SudokuView(self)
+        self.model = model
+        self.view = view
         self.partida_activa = False
         self.segundos_transcurridos = 0
 

@@ -16,7 +16,7 @@ class SudokuModel:
 
     def __init__(self):
         """Inicializa una nueva instancia del modelo con valores por defecto."""
-        self.archivo_json = "clasificacion.json"
+        self.archivo_json = "data/clasificacion.json"
         self.inicializar_tableros()
 
     def inicializar_tableros(self):
