@@ -181,7 +181,7 @@ class SudokuController:
                 json.dump(estado_juego, archivo, indent=4)
             messagebox.showinfo("Guardado Exitoso", f"Partida de '{self.model.jugador_actual}' guardada correctamente.")
         except OSError as e:
-            messagebox.showerror("Error de Guardado", f"No se pudo guardar: {e}")
+            messagebox.showerror("Error de Guardado", f"No se pudo guardar la partida: {e}")
 
     def cargar_partida(self):
         """Carga el estado del juego desde el archivo JSON correspondiente al nombre ingresado."""
@@ -218,8 +218,8 @@ class SudokuController:
             messagebox.showinfo("Carga Exitosa", f"Partida de '{self.model.jugador_actual}' restaurada.")
         except FileNotFoundError:
             messagebox.showwarning("No encontrada", f"No hay partida guardada para '{nombre}'.")
-        except (json.JSONDecodeError, KeyError) as e:
-            messagebox.showerror("Error", f"Archivo dañado: {e}")
+        except (json.JSONDecodeError, KeyError, OSError) as e:
+            messagebox.showerror("Error de Carga", f"El archivo de guardado está dañado o es inválido: {e}")
 
     def verificar_estado_final(self):
         """Comprueba si el jugador completó con éxito el tablero y guarda estadísticas/puntos."""
