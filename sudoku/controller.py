@@ -62,7 +62,6 @@ class SudokuController:
             self.view.lbl_tiempo.config(text=f"Tiempo: {mins:02d}:{segs:02d}")
             self.view.after(1000, self.actualizar_cronometro)
 
-
     def modificar_celda(self, f, c, event):
         """Maneja el evento de edición de contenido en una celda del tablero."""
         if not self.partida_activa:
@@ -92,6 +91,13 @@ class SudokuController:
 
             if self.model.errores >= 5:
                 self.partida_activa = False
+                
+                # Registrar derrota con 0 puntos en estadísticas generales
+                if hasattr(self.model, "registrar_resultado_personalizado"):
+                    self.model.registrar_resultado_personalizado(
+                        self.model.jugador_actual, "perdida", 0, self.segundos_transcurridos, self.model.errores, self.model.pistas_usadas, self.model.dificultad_actual
+                    )
+
                 messagebox.showerror(
                     "Fin del Juego",
                     "Has cometido 5 errores. Has perdido la partida.",
@@ -137,7 +143,7 @@ class SudokuController:
         self.verificar_estado_final()
 
     def click_auto_resolver(self):
-        """Resuelve el tablero automáticamente marcando la partida como no elegible para puntos."""
+        """Resuelve el tablero automáticamente marcando la partida como auto-resuelta con 0 puntos."""
         if not self.partida_activa:
             return
 
@@ -147,13 +153,33 @@ class SudokuController:
             self.model.matriz_juego, self.model.matriz_pistas
         )
         self.partida_activa = False
+
+        # Registrar como auto-resuelta con 0 puntos en estadísticas generales (sin puntaje para clasificación)
+        if hasattr(self.model, "registrar_resultado_personalizado"):
+            self.model.registrar_resultado_personalizado(
+                self.model.jugador_actual, "auto-resuelta", 0, self.segundos_transcurridos, self.model.errores, self.model.pistas_usadas, self.model.dificultad_actual
+            )
+
         messagebox.showinfo(
             "Resolución Automática",
-            "El sistema ha resuelto el tablero usando Backtracking. Esta partida no sumará puntos.",
+            "El sistema ha resuelto el tablero. Esta partida se ha registrado en estadísticas con 0 puntos y no suma a la clasificación.",
         )
+        self.view.crear_interfaz_menu()
 
-    def guardar_partida(self, filepath="partida_guardada.json"):
-        """Serializa y guarda el estado actual del juego en un archivo JSON."""
+    def guardar_partida(self):
+        """Serializa y guarda el estado actual del juego en un archivo JSON específico para el jugador."""
+        if not self.partida_activa:
+            messagebox.showwarning("Aviso", "No hay ninguna partida activa para guardar.")
+            return
+
+        nombre = self.model.jugador_actual.strip()
+        # Limpiar el nombre para que sea un nombre de archivo válido
+        nombre_limpio = "".join(c for c in nombre if c.isalnum() or c in ('_', '-')).lower()
+        if not nombre_limpio:
+            nombre_limpio = "jugador"
+        
+        filepath = f"partida_{nombre_limpio}.json"
+
         try:
             estado_juego = {
                 "jugador": self.model.jugador_actual,
@@ -169,17 +195,27 @@ class SudokuController:
             with open(filepath, "w", encoding="utf-8") as archivo:
                 json.dump(estado_juego, archivo, indent=4)
                 
-            messagebox.showinfo("Guardado Exitoso", "La partida se ha guardado correctamente.")
+            messagebox.showinfo("Guardado Exitoso", f"La partida de '{self.model.jugador_actual}' se ha guardado correctamente.")
         except OSError as e:
             messagebox.showerror("Error de Guardado", f"No se pudo guardar la partida: {e}")
 
-    def cargar_partida(self, filepath="partida_guardada.json"):
-        """Carga el estado del juego desde un archivo JSON y restaura la interfaz."""
+    def cargar_partida(self):
+        """Carga el estado del juego desde el archivo JSON correspondiente al nombre ingresado."""
+        nombre = self.view.entry_jugador.get().strip()
+        if not nombre:
+            messagebox.showwarning(
+                "Requisito", "Por favor, ingresa tu nombre en el campo para cargar tu partida."
+            )
+            return
+
+        nombre_limpio = "".join(c for c in nombre if c.isalnum() or c in ('_', '-')).lower()
+        filepath = f"partida_{nombre_limpio}.json"
+
         try:
             with open(filepath, "r", encoding="utf-8") as archivo:
                 estado_juego = json.load(archivo)
                 
-            self.model.jugador_actual = estado_juego.get("jugador", "Jugador")
+            self.model.jugador_actual = estado_juego.get("jugador", nombre)
             self.model.dificultad_actual = estado_juego.get("dificultad", "Facil")
             self.model.matriz_juego = estado_juego["matriz_juego"]
             self.model.matriz_solucion = estado_juego["matriz_solucion"]
@@ -201,9 +237,9 @@ class SudokuController:
             self.model.tiempo_inicio = time.time() - self.segundos_transcurridos
             self.actualizar_cronometro()
             
-            messagebox.showinfo("Carga Exitosa", "La partida se ha restaurado correctamente.")
+            messagebox.showinfo("Carga Exitosa", f"Se ha restaurado la partida de '{self.model.jugador_actual}'.")
         except FileNotFoundError:
-            messagebox.showwarning("Archivo no encontrado", "No se encontró ninguna partida guardada previa.")
+            messagebox.showwarning("Archivo no encontrado", f"No se encontró una partida guardada para el usuario '{nombre}'.")
         except (json.JSONDecodeError, KeyError) as e:
             messagebox.showerror("Error de Carga", f"El archivo de guardado está dañado o es inválido: {e}")
 
@@ -215,6 +251,7 @@ class SudokuController:
             segs = self.segundos_transcurridos % 60
             tiempo_str = f"{mins:02d}:{segs:02d}"
 
+            # Al ser victoria legítima, guarda en clasificación acumulando puntos y registra en estadísticas como ganada
             puntaje = self.model.guardar_resultado(self.segundos_transcurridos)
 
             msg = f"¡Felicidades, {self.model.jugador_actual}! Completaste el Sudoku.\n\n"
@@ -223,13 +260,13 @@ class SudokuController:
             msg += f"Errores cometidos: {self.model.errores}\n"
             msg += f"Pistas de ayuda usadas: {self.model.pistas_usadas}\n"
             if puntaje is not None:
-                msg += f"Puntaje obtenido: {puntaje} pts\n"
+                msg += f"Puntaje obtenido: {puntaje} pts (Acumulado en clasificación)\n"
 
             messagebox.showinfo("¡Victoria!", msg)
             self.view.crear_interfaz_menu()
 
     def click_ver_clasificacion(self):
-        """Despliega una ventana emergente con el Top 10 de puntuaciones para la dificultad seleccionada."""
+        """Despliega una ventana emergente con el Top 10 de puntuaciones acumuladas para la dificultad."""
         dificultad = self.view.var_dificultad.get()
         top_10 = self.model.obtener_top_10(dificultad)
 
@@ -262,7 +299,7 @@ class SudokuController:
         txt_area.config(state="disabled")
 
     def click_mis_estadisticas(self):
-        """Muestra en un cuadro de diálogo el historial estadístico del usuario en el sistema."""
+        """Muestra en un cuadro de diálogo el historial estadístico completo del usuario."""
         nombre = self.view.entry_jugador.get().strip()
         if not nombre:
             messagebox.showwarning(
@@ -284,7 +321,9 @@ class SudokuController:
 
         msg = f"=== ESTADÍSTICAS DE {nombre.upper()} ===\n\n"
         msg += f"• Partidas jugadas: {stats['jugadas']}\n"
-        msg += f"• Partidas ganadas legítimamente: {stats['ganadas']}\n"
+        msg += f"• Partidas ganadas: {stats['ganadas']}\n"
+        msg += f"• Partidas perdidas (0 pts): {stats.get('perdidas', 0)}\n"
+        msg += f"• Partidas auto-resueltas (0 pts): {stats.get('auto_resueltas', 0)}\n"
         msg += f"• Mejor tiempo registrado: {t_str}\n"
         msg += f"• Promedio de errores: {stats['promedio_errores']:.1f} por partida\n"
         messagebox.showinfo("Estadísticas Personales", msg)
