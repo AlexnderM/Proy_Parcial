@@ -85,7 +85,6 @@ class SudokuController:
 
             if self.model.errores >= 5:
                 self.partida_activa = False
-                # Registrar derrota automáticamente en JSON con 0 puntos
                 self._registrar_fin_juego_json("perdida", 0)
 
                 messagebox.showerror(
@@ -144,7 +143,6 @@ class SudokuController:
         )
         self.partida_activa = False
 
-        # Registrar automáticamente en JSON con 0 puntos
         self._registrar_fin_juego_json("auto-resuelta", 0)
 
         messagebox.showinfo(
@@ -229,14 +227,12 @@ class SudokuController:
             segs = self.segundos_transcurridos % 60
             tiempo_str = f"{mins:02d}:{segs:02d}"
 
-            # Cálculo de puntos (máximo 2000, penalizando tiempo, errores y pistas)
             base_puntos = 2000
             penalizacion_tiempo = self.segundos_transcurridos * 2
             penalizacion_errores = self.model.errores * 150
             penalizacion_pistas = self.model.pistas_usadas * 200
             puntaje = max(base_puntos - penalizacion_tiempo - penalizacion_errores - penalizacion_pistas, 100)
 
-            # Registrar victoria legítima en JSON (suma puntos y va a clasificación)
             self._registrar_fin_juego_json("ganada", puntaje)
 
             msg = f"¡Felicidades, {self.model.jugador_actual}! Completaste el Sudoku.\n\n"
@@ -254,7 +250,6 @@ class SudokuController:
         jugador = self.model.jugador_actual.strip()
         dificultad = self.model.dificultad_actual
 
-        # 1. Gestionar Estadísticas Generales (estadisticas.json)
         try:
             with open("estadisticas.json", "r", encoding="utf-8") as f:
                 stats_data = json.load(f)
@@ -288,7 +283,6 @@ class SudokuController:
         with open("estadisticas.json", "w", encoding="utf-8") as f:
             json.dump(stats_data, f, indent=4)
 
-        # 2. Gestionar Clasificación / Top 10 (clasificacion.json) - Solo para partidas ganadas
         if resultado == "ganada":
             try:
                 with open("clasificacion.json", "r", encoding="utf-8") as f:
@@ -299,7 +293,6 @@ class SudokuController:
             if dificultad not in clas_data:
                 clas_data[dificultad] = []
 
-            # Agregar registro a la clasificación de esa dificultad
             registro = {
                 "jugador": jugador,
                 "puntaje": puntos,
@@ -308,9 +301,7 @@ class SudokuController:
                 "pistas_usadas": self.model.pistas_usadas
             }
             clas_data[dificultad].append(registro)
-            # Ordenar por mayor puntaje y menor tiempo
             clas_data[dificultad].sort(key=lambda x: (-x["puntaje"], x["tiempo_segundos"]))
-            # Mantener solo los mejores (Top 10)
             clas_data[dificultad] = clas_data[dificultad][:10]
 
             with open("clasificacion.json", "w", encoding="utf-8") as f:
