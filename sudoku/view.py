@@ -463,6 +463,7 @@ class SudokuView(tk.Tk):
 
         botones_menu = [
             ("Nueva Partida", p["exito"], self.controlador.click_nueva_partida),
+            ("Cargar Partida", p["acento"], self.controlador.cargar_partida),
             (
                 "Ver Clasificación",
                 p["secundario"],
@@ -621,6 +622,7 @@ class SudokuView(tk.Tk):
         frame_acciones.pack()
 
         botones = [
+            ("Guardar Partida", p["acento"], self.controlador.guardar_partida),
             ("Pedir Pista", p["exito"], self.controlador.click_pedir_pista),
             ("Auto-Resolver", p["peligro"], self.controlador.click_auto_resolver),
             ("Menú Principal", p["boton_neutro"], self.volver_menu),
