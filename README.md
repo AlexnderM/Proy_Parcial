@@ -28,19 +28,27 @@ Persistencia de Datos (JSON): Guardado automático de partidas completadas para 
 
 # Estructura del Proyecto
 
+# Estructura del Proyecto
+
 ```text
 Proy_Parcial/
 ├── .github/
+│   ├── ISSUE_TEMPLATE/       # Plantillas estructuradas para Issues
 │   └── workflows/
 │       ├── ci.yml            # Workflow de pruebas y compilación
 │       └── lint.yml          # Workflow de análisis de estilo con Ruff
+├── data/
+│   └── clasificacion.json    # Archivo local de persistencia (Top 10 y estadísticas)
 ├── docs/                     # Documentación adicional del proyecto
+│   └── flujo_trabajo.md
+├── src/                      # Código fuente del juego (MVC)
+│   ├── controller.py         # Controlador: Maneja eventos e interactúa con Vista y Modelo
+│   ├── model.py              # Modelo: Lógica de negocio, Backtracking y persistencia
+│   └── view.py               # Vista: Interfaz gráfica desarrollada con Tkinter
 ├── .env.example              # Ejemplo de variables de entorno
-├── .gitignore                # Archivos ignorados por Git
-├── controller.py             # Controlador: Maneja eventos e interactúa con Vista y Modelo
+├── .gitignore                # Archivos e historial excluidos de Git
+├── LICENSE                   # Licencia del repositorio
 ├── main.py                   # Punto de entrada principal para ejecutar la aplicación
-├── model.py                  # Modelo: Lógica de negocio, Backtracking y persistencia JSON
-├── view.py                   # Vista: Interfaz gráfica desarrollada con Tkinter
 ├── requirements.txt          # Dependencias del proyecto
 └── README.md                 # Documentación general del proyecto
 ```
