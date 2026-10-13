@@ -5,10 +5,28 @@ el menú principal, la cuadrícula interactiva de 9x9, contadores de estado,
 diálogos de alerta y eventos de usuario.
 """
 
+import math
+import random
+import time
 import tkinter as tk
 from tkinter import font as tkfont
 
 FUENTE = "Helvetica"
+
+PALABRAS_VICTORIA = (
+    "¡Felicidades!",
+    "¡Fantástico!",
+    "¡Excelente!",
+    "¡Increíble!",
+    "¡Genial!",
+    "¡Espectacular!",
+    "¡Bien hecho!",
+    "¡Magnífico!",
+    "¡Impresionante!",
+    "¡Brillante!",
+)
+COLORES_CONFETI = ("#F87171", "#FBBF24", "#34D399", "#60A5FA", "#A78BFA", "#F472B6")
+DURACION_CELEBRACION_MS = 5500
 
 PALETAS = {
     "claro": {
@@ -240,7 +258,7 @@ class SudokuView(tk.Tk):
         self.controlador = controlador
         self.tema = "claro"
         self.title("Sudoku Clásico - Python GUI")
-        self.geometry("520x650")
+        self.geometry("520x700")
         self.resizable(False, False)
         self._ciclo = 0
         self.celdas_ui = {}
@@ -251,12 +269,11 @@ class SudokuView(tk.Tk):
         self._colores_temporales = {}
         self._unidades_completas = set()
         self._animar_entrada = False
-        self.notas = {}
         self.lienzos_notas = {}
-        self.modo_borrador = False
         self.boton_borrador = None
         self._teclas_borrador = set()
         self._lado_celda = 0
+        self._celebracion = None
         self.crear_interfaz_menu()
 
     @property
@@ -267,6 +284,15 @@ class SudokuView(tk.Tk):
             dict: Colores del tema "claro" u "oscuro".
         """
         return PALETAS[self.tema]
+
+    @property
+    def modo_borrador(self):
+        """Indica si el modo borrador está activo (el estado vive en el controlador).
+
+        Returns:
+            bool: True si las teclas numéricas anotan candidatos.
+        """
+        return self.controlador.modo_borrador
 
     def limpiar_ventana(self):
         """Elimina los widgets de la ventana y reinicia el estado del tablero.
@@ -286,11 +312,10 @@ class SudokuView(tk.Tk):
         self._colores_temporales = {}
         self._unidades_completas = set()
         self._animar_entrada = False
-        self.notas = {}
         self.lienzos_notas = {}
-        self.modo_borrador = False
         self.boton_borrador = None
         self._teclas_borrador = set()
+        self._celebracion = None
 
     def volver_menu(self):
         """Detiene la partida en curso y regresa al menú principal."""
@@ -652,38 +677,51 @@ class SudokuView(tk.Tk):
                         )
                         self.lienzos_notas[(fila_real, col_real)] = lienzo
 
-        frame_acciones = tk.Frame(self, bg=p["fondo"], pady=10)
+        frame_acciones = tk.Frame(self, bg=p["fondo"], pady=6)
         frame_acciones.pack()
 
-        botones = [
-            ("Guardar Partida", p["acento"], self.controlador.guardar_partida),
-            ("Pedir Pista", p["exito"], self.controlador.click_pedir_pista),
-            ("Auto-Resolver", p["peligro"], self.controlador.click_auto_resolver),
-            ("Menú Principal", p["boton_neutro"], self.volver_menu),
-        ]
-        for columna, (texto, color, comando) in enumerate(botones):
-            self._crear_boton(
-                frame_acciones,
-                texto,
-                color,
-                comando,
-                p["fondo"],
-                ancho=130,
-                alto=38,
-                tamano=10,
-            ).grid(row=0, column=columna, padx=5)
-
+        # Fila de ayudas: pista y modo borrador
+        fila_ayudas = tk.Frame(frame_acciones, bg=p["fondo"])
+        fila_ayudas.pack(pady=(0, 8))
+        self._crear_boton(
+            fila_ayudas,
+            "Pedir Pista",
+            p["exito"],
+            self.controlador.click_pedir_pista,
+            p["fondo"],
+            ancho=235,
+            alto=40,
+        ).pack(side="left", padx=5)
         self.boton_borrador = self._crear_boton(
-            frame_acciones,
+            fila_ayudas,
             "Borrador: OFF",
             p["boton_neutro"],
             self.alternar_borrador,
             p["fondo"],
-            ancho=180,
-            alto=36,
-            tamano=10,
+            ancho=235,
+            alto=40,
         )
-        self.boton_borrador.grid(row=1, column=0, columnspan=4, pady=(8, 0))
+        self.boton_borrador.pack(side="left", padx=5)
+
+        # Fila de partida: guardar, auto-resolver y volver al menú
+        fila_partida = tk.Frame(frame_acciones, bg=p["fondo"])
+        fila_partida.pack()
+        botones = [
+            ("Guardar Partida", p["acento"], self.controlador.guardar_partida),
+            ("Auto-Resolver", p["peligro"], self.controlador.click_auto_resolver),
+            ("Menú Principal", p["secundario"], self.volver_menu),
+        ]
+        for texto, color, comando in botones:
+            self._crear_boton(
+                fila_partida,
+                texto,
+                color,
+                comando,
+                p["fondo"],
+                ancho=150,
+                alto=36,
+                tamano=10,
+            ).pack(side="left", padx=5)
 
     @staticmethod
     def _celdas_de_unidad(tipo, indice):
@@ -808,38 +846,49 @@ class SudokuView(tk.Tk):
             self._teclas_borrador.discard(event.keysym)
             return
         if event.keysym in ("BackSpace", "Delete") or event.char.isdigit():
-            self._despues(1, self._tras_modificar)
+            self._despues(1, self._tras_modificar, fila, col)
             self.controlador.modificar_celda(fila, col, event)
 
-    def _tras_modificar(self):
-        """Limpia notas obsoletas, actualiza el resaltado y revisa unidades."""
-        if self.celda_activa is not None:
-            self._depurar_notas(*self.celda_activa)
+    def _tras_modificar(self, fila, col):
+        """Limpia el dígito temporal del borrador, repinta y revisa unidades.
+
+        En modo borrador el controlador ya guardó la nota en el modelo, así
+        que el dígito escrito en la celda se borra y solo queda la nota.
+
+        Args:
+            fila (int): Fila de la celda que se modificó.
+            col (int): Columna de la celda que se modificó.
+        """
+        entry = self.celdas_ui.get((fila, col))
+        if (
+            self.controlador.modo_borrador
+            and entry is not None
+            and (fila, col) not in self.celdas_fijas
+            and entry.get()
+        ):
+            entry.delete(0, tk.END)
         self._repintar_tablero()
         self._revisar_unidades(animar=True)
 
     def alternar_borrador(self):
-        """Activa o desactiva el modo borrador (notas de candidatos)."""
-        self.modo_borrador = not self.modo_borrador
+        """Pide al controlador alternar el modo borrador y actualiza el botón."""
+        activo = self.controlador.alternar_modo_borrador()
         p = self.paleta
         if self.boton_borrador is not None and self.boton_borrador.winfo_exists():
-            self.boton_borrador.texto = (
-                "Borrador: ON" if self.modo_borrador else "Borrador: OFF"
-            )
-            self.boton_borrador.color = (
-                p["acento"] if self.modo_borrador else p["boton_neutro"]
-            )
+            self.boton_borrador.texto = "Borrador: ON" if activo else "Borrador: OFF"
+            self.boton_borrador.color = p["acento"] if activo else p["boton_neutro"]
             self.boton_borrador._dibujar()
         entry = self.celdas_ui.get(self.celda_activa)
         if entry is not None:
             entry.focus_set()
 
     def _al_presionar_tecla(self, fila, col, event):
-        """Intercepta los dígitos en modo borrador para anotarlos como notas.
+        """Protege las celdas con valor mientras el modo borrador está activo.
 
-        En modo borrador, un dígito del 1 al 9 alterna esa nota en la celda
-        (solo si está vacía) y no se escribe como valor. Borrar en una celda
-        vacía elimina todas sus notas.
+        En modo borrador, un dígito en una celda vacía pasa normal: al soltar
+        la tecla el controlador lo guarda como nota. Pero si la celda ya tiene
+        un valor (o se pulsa 0), la tecla se bloquea para no anotar ni borrar
+        nada por accidente.
 
         Args:
             fila (int): Fila de la celda donde se presionó la tecla.
@@ -847,42 +896,16 @@ class SudokuView(tk.Tk):
             event: Evento de teclado de Tkinter (<KeyPress>).
 
         Returns:
-            str | None: "break" si la tecla se consumió como nota.
+            str | None: "break" si la tecla se bloqueó.
         """
         celda = (fila, col)
         if not self.modo_borrador or celda in self.celdas_fijas:
             return None
-        entry = self.celdas_ui[celda]
-        es_digito = len(event.char) == 1 and event.char in "123456789"
-        es_borrar = event.keysym in ("BackSpace", "Delete")
-
-        if es_digito:
-            if not entry.get():
-                self._alternar_nota(celda, int(event.char))
-            self._teclas_borrador.add(event.keysym)
-            return "break"
-        if es_borrar and not entry.get():
-            self.notas.pop(celda, None)
-            self._pintar_celda(fila, col)
+        es_digito = len(event.char) == 1 and event.char.isdigit()
+        if es_digito and (event.char == "0" or self.celdas_ui[celda].get()):
             self._teclas_borrador.add(event.keysym)
             return "break"
         return None
-
-    def _alternar_nota(self, celda, numero):
-        """Agrega la nota si no existe en la celda o la quita si ya estaba.
-
-        Args:
-            celda (tuple[int, int]): Coordenadas (fila, columna) de la celda.
-            numero (int): Candidato del 1 al 9.
-        """
-        notas = self.notas.setdefault(celda, set())
-        if numero in notas:
-            notas.discard(numero)
-        else:
-            notas.add(numero)
-        if not notas:
-            del self.notas[celda]
-        self._pintar_celda(*celda)
 
     def _clic_notas(self, fila, col):
         """Pasa el clic del lienzo de notas a la celda que cubre.
@@ -908,7 +931,7 @@ class SudokuView(tk.Tk):
         entry = self.celdas_ui.get((f, c))
         if lienzo is None or entry is None or not lienzo.winfo_exists():
             return
-        notas = self.notas.get((f, c))
+        notas = self.controlador.model.notas[f][c]
         if not notas or entry.get() or (f, c) in self._ocultas:
             lienzo.place_forget()
             return
@@ -926,33 +949,6 @@ class SudokuView(tk.Tk):
                 font=(FUENTE, 7, "bold"),
             )
         lienzo.place(x=0, y=0, relwidth=1, relheight=1)
-
-    def _depurar_notas(self, f, c):
-        """Quita las notas de una celda con valor y las del mismo número.
-
-        Si la celda (f, c) tiene un dígito, se borran sus notas y ese dígito
-        se elimina de las notas de su fila, columna y bloque.
-
-        Args:
-            f (int): Fila de la celda.
-            c (int): Columna de la celda.
-        """
-        valor = self.celdas_ui[(f, c)].get()
-        if not valor:
-            return
-        self.notas.pop((f, c), None)
-        numero = int(valor)
-        relacionadas = set(
-            self._celdas_de_unidad("f", f)
-            + self._celdas_de_unidad("c", c)
-            + self._celdas_de_unidad("b", 3 * (f // 3) + c // 3)
-        )
-        for celda in relacionadas:
-            notas = self.notas.get(celda)
-            if notas and numero in notas:
-                notas.discard(numero)
-                if not notas:
-                    del self.notas[celda]
 
     def _unidades_completas_ahora(self):
         """Calcula qué filas, columnas y bloques están completos y válidos.
@@ -1066,6 +1062,192 @@ class SudokuView(tk.Tk):
         entry.config(bg=color)
         self._despues(110, self._parpadear, celda, restantes - 1)
 
+    def mostrar_celebracion(
+        self, resumen, al_terminar, duracion_ms=DURACION_CELEBRACION_MS
+    ):
+        """Muestra una animación de victoria con confeti y una frase aleatoria.
+
+        Cubre toda la ventana, anima la frase, cuenta los puntos y, al
+        terminar el tiempo (o al hacer clic), ejecuta la función indicada.
+
+        Args:
+            resumen (dict): Datos de la partida: jugador, dificultad, tiempo,
+                errores, pistas y puntaje.
+            al_terminar: Función sin argumentos que se llama al finalizar.
+            duracion_ms (int): Duración total de la animación en milisegundos.
+        """
+        self.update_idletasks()
+        ancho = self.winfo_width() if self.winfo_width() > 1 else 520
+        alto = self.winfo_height() if self.winfo_height() > 1 else 700
+
+        lienzo = tk.Canvas(
+            self, bg=self.paleta["encabezado"], highlightthickness=0, bd=0
+        )
+        lienzo.place(x=0, y=0, relwidth=1, relheight=1)
+        lienzo.focus_set()
+        lienzo.bind("<Button-1>", lambda event: self._terminar_celebracion())
+
+        cx = ancho / 2
+        palabra = lienzo.create_text(
+            cx,
+            alto * 0.32,
+            text=random.choice(PALABRAS_VICTORIA),
+            fill="white",
+            font=(FUENTE, -14, "bold"),
+        )
+        lienzo.create_text(
+            cx,
+            alto * 0.45,
+            text=f"{resumen['jugador']}, completaste el Sudoku ({resumen['dificultad']})",
+            fill="#CBD5E1",
+            font=(FUENTE, 12),
+        )
+        lienzo.create_text(
+            cx,
+            alto * 0.51,
+            text=(
+                f"Tiempo {resumen['tiempo']}   ·   Errores {resumen['errores']}"
+                f"   ·   Pistas {resumen['pistas']}"
+            ),
+            fill="#CBD5E1",
+            font=(FUENTE, 11),
+        )
+        puntos = lienzo.create_text(
+            cx,
+            alto * 0.62,
+            text="+0 pts",
+            fill="#FBBF24",
+            font=(FUENTE, 28, "bold"),
+        )
+        cuenta = lienzo.create_text(
+            cx, alto - 30, text="", fill="#94A3B8", font=(FUENTE, 10)
+        )
+
+        self._celebracion = {
+            "lienzo": lienzo,
+            "ancho": ancho,
+            "alto": alto,
+            "inicio": time.monotonic(),
+            "duracion": duracion_ms,
+            "palabra": palabra,
+            "puntos": puntos,
+            "cuenta": cuenta,
+            "puntaje": resumen["puntaje"],
+            "particulas": [],
+            "al_terminar": al_terminar,
+        }
+        # Dos cañones de confeti desde las esquinas inferiores
+        for _ in range(45):
+            self._nueva_particula(
+                ancho * 0.05, alto, random.uniform(2, 9), -random.uniform(11, 18)
+            )
+            self._nueva_particula(
+                ancho * 0.95, alto, -random.uniform(2, 9), -random.uniform(11, 18)
+            )
+        self._paso_celebracion()
+
+    def _nueva_particula(self, x, y, vx, vy):
+        """Crea una pieza de confeti en el lienzo de la celebración.
+
+        Args:
+            x (float): Posición horizontal inicial.
+            y (float): Posición vertical inicial.
+            vx (float): Velocidad horizontal inicial.
+            vy (float): Velocidad vertical inicial.
+        """
+        est = self._celebracion
+        lienzo = est["lienzo"]
+        ancho_p = random.randint(5, 10)
+        alto_p = random.randint(4, 8)
+        crear = lienzo.create_oval if random.random() < 0.3 else lienzo.create_rectangle
+        item = crear(
+            x,
+            y,
+            x + ancho_p,
+            y + alto_p,
+            fill=random.choice(COLORES_CONFETI),
+            outline="",
+        )
+        lienzo.tag_lower(item)
+        est["particulas"].append(
+            [item, x, y, vx, vy, ancho_p, alto_p, random.uniform(0, 6.28)]
+        )
+
+    def _paso_celebracion(self):
+        """Dibuja un cuadro de la celebración y programa el siguiente."""
+        est = self._celebracion
+        if est is None or not est["lienzo"].winfo_exists():
+            return
+        lienzo = est["lienzo"]
+        t = (time.monotonic() - est["inicio"]) * 1000
+        if t >= est["duracion"]:
+            self._terminar_celebracion()
+            return
+
+        # Frase: entra creciendo con rebote y luego "late" cambiando de color
+        k = min(1.0, t / 700)
+        c1 = 1.70158
+        c3 = c1 + 1
+        suavizado = 1 + c3 * (k - 1) ** 3 + c1 * (k - 1) ** 2
+        tam = 14 + 28 * suavizado
+        if k >= 1:
+            tam = 42 + 2 * math.sin(t / 140)
+        lienzo.itemconfig(
+            est["palabra"],
+            font=(FUENTE, -round(tam), "bold"),
+            fill=COLORES_CONFETI[int(t / 160) % len(COLORES_CONFETI)],
+        )
+
+        # Puntaje que sube de 0 hasta el valor final
+        avance = min(1.0, max(0.0, (t - 600) / 1400))
+        lienzo.itemconfig(
+            est["puntos"], text=f"+{int(est['puntaje'] * avance)} pts"
+        )
+
+        restante = math.ceil((est["duracion"] - t) / 1000)
+        lienzo.itemconfig(
+            est["cuenta"],
+            text=f"Volviendo al menú en {restante}…  (clic para saltar)",
+        )
+
+        # Lluvia de confeti hasta poco antes del final
+        if t < est["duracion"] - 1200:
+            for _ in range(2):
+                self._nueva_particula(
+                    random.uniform(0, est["ancho"]),
+                    -10,
+                    random.uniform(-1, 1),
+                    random.uniform(1.5, 3.5),
+                )
+
+        vivas = []
+        for part in est["particulas"]:
+            item, x, y, vx, vy, ancho_p, alto_p, fase = part
+            vy = min(vy + 0.3, 6)
+            vx *= 0.99
+            x += vx + math.sin(fase + t / 200) * 0.8
+            y += vy
+            if y > est["alto"] + 20:
+                lienzo.delete(item)
+                continue
+            lienzo.coords(item, x, y, x + ancho_p, y + alto_p)
+            part[1:5] = [x, y, vx, vy]
+            vivas.append(part)
+        est["particulas"] = vivas
+
+        self._despues(33, self._paso_celebracion)
+
+    def _terminar_celebracion(self):
+        """Cierra la celebración (una sola vez) y ejecuta la acción final."""
+        est = self._celebracion
+        if est is None:
+            return
+        self._celebracion = None
+        if est["al_terminar"] is not None:
+            est["al_terminar"]()
+        elif est["lienzo"].winfo_exists():
+            est["lienzo"].destroy()
+
     def validar_entrada_celda(self, texto):
         """Valida que la celda quede vacía o con un dígito del 1 al 9.
 
@@ -1096,7 +1278,6 @@ class SudokuView(tk.Tk):
             entry.delete(0, tk.END)
             if valor != 0:
                 entry.insert(0, str(valor))
-                self.notas.pop((f, c), None)
 
             if matriz_pistas[f][c]:
                 self.celdas_fijas.add((f, c))
