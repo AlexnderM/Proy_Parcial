@@ -21,10 +21,20 @@ class SudokuController:
         self.view = view
         self.partida_activa = False
         self.segundos_transcurridos = 0
+        self.modo_borrador = False
 
     def iniciar_aplicacion(self):
         """Arranca el bucle de eventos principal de la interfaz de usuario."""
         self.view.mainloop()
+
+    def alternar_modo_borrador(self):
+        """Alterna el estado del modo borrador (activado/desactivado).
+
+        Returns:
+            bool: El nuevo estado del modo borrador.
+        """
+        self.modo_borrador = not self.modo_borrador
+        return self.modo_borrador
 
     def click_nueva_partida(self):
         """Gestiona el inicio de una nueva partida validando el nombre del jugador."""
@@ -39,6 +49,7 @@ class SudokuController:
         self.model.jugador_actual = nombre
         self.partida_activa = True
         self.segundos_transcurridos = 0
+        self.modo_borrador = False
 
         self.view.crear_interfaz_juego(
             self.model.jugador_actual, self.model.dificultad_actual
@@ -63,17 +74,35 @@ class SudokuController:
         if not self.partida_activa:
             return
 
-        nuevo_valor = self.view.celdas_ui[(f, c)].get().strip()
+        # Evitar modificar celdas que son pistas iniciales fijas
+        if self.model.matriz_pistas[f][c]:
+            return
 
+        entry_widget = self.view.celdas_ui[(f, c)]
+        nuevo_valor = entry_widget.get().strip()
+
+        # Si está vacío, limpiamos tanto el valor como las notas
         if nuevo_valor == "":
             self.model.matriz_juego[f][c] = 0
+            self.model.limpiar_notas_celda(f, c)
             self.view.limpiar_error_celda(f, c)
             return
 
+        # Si el MODO BORRADOR está activo, permitimos amontonar y conservar los números escritos
+        if self.modo_borrador:
+            for char in nuevo_valor:
+                if char.isdigit() and char != '0':
+                    num = int(char)
+                    self.model.alternar_nota(f, c, num)
+            return
+
+        # Modo Definitivo normal (si no es borrador)
         if not nuevo_valor.isdigit():
             return
 
-        num = int(nuevo_valor)
+        num = int(nuevo_valor[-1])
+        entry_widget.delete(0, tk.END)
+        entry_widget.insert(0, str(num))
 
         if not self.model.es_numero_correcto(f, c, num):
             self.model.errores += 1
@@ -82,10 +111,10 @@ class SudokuController:
             )
             self.view.mostrar_error_celda(f, c)
             self.model.matriz_juego[f][c] = 0
+            self.model.limpiar_notas_celda(f, c)
 
             if self.model.errores >= 5:
                 self.partida_activa = False
-                # Registrar derrota automáticamente en JSON con 0 puntos
                 self._registrar_fin_juego_json("perdida", 0)
 
                 messagebox.showerror(
@@ -95,6 +124,7 @@ class SudokuController:
                 self.view.crear_interfaz_menu()
         else:
             self.model.matriz_juego[f][c] = num
+            self.model.limpiar_notas_celda(f, c)
             self.view.limpiar_error_celda(f, c)
             self.verificar_estado_final()
     
@@ -124,6 +154,7 @@ class SudokuController:
 
         self.model.matriz_juego[f][c] = valor_correcto
         self.model.matriz_pistas[f][c] = True
+        self.model.limpiar_notas_celda(f, c)
         self.model.pistas_usadas += 1
 
         self.view.lbl_pistas.config(text=f"Pistas: {self.model.pistas_usadas}")
@@ -139,12 +170,15 @@ class SudokuController:
 
         self.model.resuelto_auto = True
         self.model.matriz_juego = copy.deepcopy(self.model.matriz_solucion)
+        for f in range(9):
+            for c in range(9):
+                self.model.limpiar_notas_celda(f, c)
+
         self.view.actualizar_tablero_interfaz(
             self.model.matriz_juego, self.model.matriz_pistas
         )
         self.partida_activa = False
 
-        # Registrar automáticamente en JSON con 0 puntos
         self._registrar_fin_juego_json("auto-resuelta", 0)
 
         messagebox.showinfo(
@@ -167,12 +201,15 @@ class SudokuController:
         filepath = f"partida_{nombre_limpio}.json"
 
         try:
+            notas_serializables = [[list(self.model.notas[f][c]) for c in range(9)] for f in range(9)]
+
             estado_juego = {
                 "jugador": self.model.jugador_actual,
                 "dificultad": self.model.dificultad_actual,
                 "matriz_juego": self.model.matriz_juego,
                 "matriz_solucion": self.model.matriz_solucion,
                 "matriz_pistas": self.model.matriz_pistas,
+                "notas": notas_serializables,
                 "errores": self.model.errores,
                 "pistas_usadas": self.model.pistas_usadas,
                 "segundos_transcurridos": self.segundos_transcurridos
@@ -202,10 +239,18 @@ class SudokuController:
             self.model.matriz_juego = estado_juego["matriz_juego"]
             self.model.matriz_solucion = estado_juego["matriz_solucion"]
             self.model.matriz_pistas = estado_juego["matriz_pistas"]
+            
+            notas_cargadas = estado_juego.get("notas", None)
+            if notas_cargadas:
+                self.model.notas = [[set(notas_cargadas[f][c]) for c in range(9)] for f in range(9)]
+            else:
+                self.model.notas = [[set() for _ in range(9)] for _ in range(9)]
+
             self.model.errores = estado_juego.get("errores", 0)
             self.model.pistas_usadas = estado_juego.get("pistas_usadas", 0)
             self.segundos_transcurridos = estado_juego.get("segundos_transcurridos", 0)
             self.partida_activa = True
+            self.modo_borrador = False
             
             self.view.crear_interfaz_juego(self.model.jugador_actual, self.model.dificultad_actual)
             self.view.actualizar_tablero_interfaz(self.model.matriz_juego, self.model.matriz_pistas)
@@ -229,14 +274,12 @@ class SudokuController:
             segs = self.segundos_transcurridos % 60
             tiempo_str = f"{mins:02d}:{segs:02d}"
 
-            # Cálculo de puntos (máximo 2000, penalizando tiempo, errores y pistas)
             base_puntos = 2000
             penalizacion_tiempo = self.segundos_transcurridos * 2
             penalizacion_errores = self.model.errores * 150
             penalizacion_pistas = self.model.pistas_usadas * 200
             puntaje = max(base_puntos - penalizacion_tiempo - penalizacion_errores - penalizacion_pistas, 100)
 
-            # Registrar victoria legítima en JSON (suma puntos y va a clasificación)
             self._registrar_fin_juego_json("ganada", puntaje)
 
             msg = f"¡Felicidades, {self.model.jugador_actual}! Completaste el Sudoku.\n\n"
@@ -250,11 +293,10 @@ class SudokuController:
             self.view.crear_interfaz_menu()
 
     def _registrar_fin_juego_json(self, resultado, puntos):
-        """Guarda automáticamente el resultado de la partida en archivos JSON locales (estadísticas y clasificación)."""
+        """Guarda automáticamente el resultado de la partida en archivos JSON locales."""
         jugador = self.model.jugador_actual.strip()
         dificultad = self.model.dificultad_actual
 
-        # 1. Gestionar Estadísticas Generales (estadisticas.json)
         try:
             with open("estadisticas.json", "r", encoding="utf-8") as f:
                 stats_data = json.load(f)
@@ -288,7 +330,6 @@ class SudokuController:
         with open("estadisticas.json", "w", encoding="utf-8") as f:
             json.dump(stats_data, f, indent=4)
 
-        # 2. Gestionar Clasificación / Top 10 (clasificacion.json) - Solo para partidas ganadas
         if resultado == "ganada":
             try:
                 with open("clasificacion.json", "r", encoding="utf-8") as f:
@@ -299,7 +340,6 @@ class SudokuController:
             if dificultad not in clas_data:
                 clas_data[dificultad] = []
 
-            # Agregar registro a la clasificación de esa dificultad
             registro = {
                 "jugador": jugador,
                 "puntaje": puntos,
@@ -308,9 +348,7 @@ class SudokuController:
                 "pistas_usadas": self.model.pistas_usadas
             }
             clas_data[dificultad].append(registro)
-            # Ordenar por mayor puntaje y menor tiempo
             clas_data[dificultad].sort(key=lambda x: (-x["puntaje"], x["tiempo_segundos"]))
-            # Mantener solo los mejores (Top 10)
             clas_data[dificultad] = clas_data[dificultad][:10]
 
             with open("clasificacion.json", "w", encoding="utf-8") as f:
