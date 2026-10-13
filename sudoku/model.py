@@ -8,7 +8,7 @@ import copy
 import json
 import os
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class SudokuModel:
@@ -192,7 +192,7 @@ class SudokuModel:
             "tiempo_segundos": segundos,
             "errores": self.errores,
             "pistas_usadas": self.pistas_usadas,
-            "fecha": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "fecha": datetime.now(UTC).strftime("%Y-%m-%d"),
             "resuelto_auto": False
         }
 

@@ -125,9 +125,27 @@ class SudokuController:
         else:
             self.model.matriz_juego[f][c] = num
             self.model.limpiar_notas_celda(f, c)
+            self._depurar_notas_relacionadas(f, c, num)
             self.view.limpiar_error_celda(f, c)
             self.verificar_estado_final()
     
+    def _depurar_notas_relacionadas(self, f, c, num):
+        """Quita un número ya colocado de las notas de su fila, columna y bloque.
+
+        Args:
+            f (int): Fila de la celda donde se colocó el número.
+            c (int): Columna de la celda donde se colocó el número.
+            num (int): Número colocado (1 a 9).
+        """
+        ini_f, ini_c = (f // 3) * 3, (c // 3) * 3
+        relacionadas = (
+            {(f, k) for k in range(9)}
+            | {(k, c) for k in range(9)}
+            | {(ini_f + i, ini_c + j) for i in range(3) for j in range(3)}
+        )
+        for fila, col in relacionadas:
+            self.model.notas[fila][col].discard(num)
+
     def click_pedir_pista(self):
         """Otorga una pista revelando una celda vacía aleatoria con su valor correcto."""
         if not self.partida_activa:
@@ -155,6 +173,7 @@ class SudokuController:
         self.model.matriz_juego[f][c] = valor_correcto
         self.model.matriz_pistas[f][c] = True
         self.model.limpiar_notas_celda(f, c)
+        self._depurar_notas_relacionadas(f, c, valor_correcto)
         self.model.pistas_usadas += 1
 
         self.view.lbl_pistas.config(text=f"Pistas: {self.model.pistas_usadas}")
@@ -282,15 +301,16 @@ class SudokuController:
 
             self._registrar_fin_juego_json("ganada", puntaje)
 
-            msg = f"¡Felicidades, {self.model.jugador_actual}! Completaste el Sudoku.\n\n"
-            msg += f"Dificultad: {self.model.dificultad_actual}\n"
-            msg += f"Tiempo: {tiempo_str}\n"
-            msg += f"Errores: {self.model.errores}\n"
-            msg += f"Pistas: {self.model.pistas_usadas}\n"
-            msg += f"Puntaje obtenido: {puntaje} pts (Guardado en clasificación)\n"
-
-            messagebox.showinfo("¡Victoria!", msg)
-            self.view.crear_interfaz_menu()
+            resumen = {
+                "jugador": self.model.jugador_actual,
+                "dificultad": self.model.dificultad_actual,
+                "tiempo": tiempo_str,
+                "errores": self.model.errores,
+                "pistas": self.model.pistas_usadas,
+                "puntaje": puntaje,
+            }
+            # La vista anima la celebración y vuelve sola al menú al terminar
+            self.view.mostrar_celebracion(resumen, self.view.crear_interfaz_menu)
 
     def _registrar_fin_juego_json(self, resultado, puntos):
         """Guarda automáticamente el resultado de la partida en archivos JSON locales."""
