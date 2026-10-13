@@ -1,0 +1,10 @@
+{
+    "deysi": {
+        "jugadas": 4,
+        "ganadas": 0,
+        "perdidas": 2,
+        "auto_resueltas": 2,
+        "mejor_tiempo": 0,
+        "total_errores": 12
+    }
+}

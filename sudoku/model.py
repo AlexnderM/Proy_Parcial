@@ -24,6 +24,8 @@ class SudokuModel:
         self.matriz_solucion = [[0] * 9 for _ in range(9)]
         self.matriz_juego = [[0] * 9 for _ in range(9)]
         self.matriz_pistas = [[False] * 9 for _ in range(9)]
+        # Inicializa la matriz de notas (conjuntos) para cada una de las 81 celdas del tablero[cite: 4]
+        self.notas = [[set() for _ in range(9)] for _ in range(9)]
         self.jugador_actual = ""
         self.dificultad_actual = "Fácil"
         self.errores = 0
@@ -31,25 +33,47 @@ class SudokuModel:
         self.tiempo_inicio = 0
         self.resuelto_auto = False
 
+    def alternar_nota(self, f: int, c: int, num: int):
+        """Agrega o quita un número de la lista de notas candidatas en la celda (f, c).
+
+        Args:
+            f (int): Índice de la fila (0 a 8).
+            c (int): Índice de la columna (0 a 8).
+            num (int): Número candidato a alternar (1 a 9).
+        """
+        if num in self.notas[f][c]:
+            self.notas[f][c].remove(num)
+        else:
+            self.notas[f][c].add(num)
+
+    def limpiar_notas_celda(self, f: int, c: int):
+        """Elimina y limpia todas las notas candidatas almacenadas en una celda específica.
+
+        Args:
+            f (int): Índice de la fila (0 a 8).
+            c (int): Índice de la columna (0 a 8).
+        """
+        self.notas[f][c].clear()
+
     def es_valido(self, matriz, fila, col, num):
         """Comprueba si un número se puede colocar en una posición de la matriz.
 
         Args:
-            matriz (list[list[int]]): Matriz de 9x9 con los valores actuales.
-            fila (int): Índice de la fila (0 a 8).
-            col (int): Índice de la columna (0 a 8).
-            num (int): Número a validar (1 a 9).
+            matriz (list[list[int]]): Matriz de 9x9 con los valores actuales[cite: 4].
+            fila (int): Índice de la fila (0 a 8)[cite: 4].
+            col (int): Índice de la columna (0 a 8)[cite: 4].
+            num (int): Número a validar (1 a 9)[cite: 4].
 
         Returns:
-            bool: True si el movimiento no genera conflictos, False en caso contrario.
+            bool: True si el movimiento no genera conflictos, False en caso contrario[cite: 4].
         """
-        # Validar fila
+        # Validar fila[cite: 4]
         if num in matriz[fila]:
             return False
-        # Validar columna
+        # Validar columna[cite: 4]
         if num in [matriz[f][col] for f in range(9)]:
             return False
-        # Validar subcuadrícula 3x3
+        # Validar subcuadrícula 3x3[cite: 4]
         ini_f, ini_c = (fila // 3) * 3, (col // 3) * 3
         for f in range(ini_f, ini_f + 3):
             for c in range(ini_c, ini_c + 3):
@@ -61,10 +85,10 @@ class SudokuModel:
         """Resuelve recursivamente el Sudoku utilizando Backtracking.
 
         Args:
-            matriz (list[list[int]]): Matriz de 9x9 a resolver.
+            matriz (list[list[int]]): Matriz de 9x9 a resolver[cite: 4].
 
         Returns:
-            bool: True si encontró una solución válida, False si la combinación falla.
+            bool: True si encontró una solución válida, False si la combinación falla[cite: 4].
         """
         for f in range(9):
             for c in range(9):
@@ -84,7 +108,7 @@ class SudokuModel:
         """Genera un nuevo tablero aleatorio según la dificultad seleccionada.
 
         Args:
-            dificultad (str): Nivel de dificultad ("Fácil", "Medio", "Difícil").
+            dificultad (str): Nivel de dificultad ("Fácil", "Medio", "Difícil")[cite: 4].
         """
         self.inicializar_tableros()
         self.dificultad_actual = dificultad
@@ -111,12 +135,12 @@ class SudokuModel:
         """Verifica si el número ingresado en la posición (f, c) coincide con la matriz solución.
 
         Args:
-            f (int): Índice de la fila.
-            c (int): Índice de la columna.
-            valor (int): Número a verificar.
+            f (int): Índice de la fila[cite: 4].
+            c (int): Índice de la columna[cite: 4].
+            valor (int): Número a verificar[cite: 4].
 
         Returns:
-            bool: True si coincide con la solución, False en caso contrario.
+            bool: True si coincide con la solución, False en caso contrario[cite: 4].
         """
         return self.matriz_solucion[f][c] == valor
     
@@ -124,7 +148,7 @@ class SudokuModel:
         """Verifica si el tablero está lleno y sin conflictos visuales.
 
         Returns:
-            bool: True si el juego está completo y correcto, False de lo contrario.
+            bool: True si el juego está completo y correcto, False de lo contrario[cite: 4].
         """
         for f in range(9):
             for c in range(9):
@@ -138,10 +162,10 @@ class SudokuModel:
         """Calcula la puntuación final ponderando tiempo, errores y pistas.
 
         Args:
-            segundos (int): Tiempo de juego transcurrido en segundos.
+            segundos (int): Tiempo de juego transcurrido en segundos[cite: 4].
 
         Returns:
-            int: Puntaje total obtenido (mínimo 0).
+            int: Puntaje total obtenido (mínimo 0)[cite: 4].
         """
         bases = {"Fácil": 500, "Medio": 1000, "Difícil": 1500}
         base = bases.get(self.dificultad_actual, 500)
@@ -152,10 +176,10 @@ class SudokuModel:
         """Guarda la partida completada en el archivo JSON de historial.
 
         Args:
-            segundos (int): Tiempo total empleado para completar la partida.
+            segundos (int): Tiempo total empleado para completar la partida[cite: 4].
 
         Returns:
-            int | None: El puntaje obtenido o None si se resolvió automáticamente.
+            int | None: El puntaje obtenido o None si se resolvió automáticamente[cite: 4].
         """
         if self.resuelto_auto:
             return None
@@ -177,7 +201,7 @@ class SudokuModel:
             try:
                 with open(self.archivo_json, "r", encoding="utf-8") as f:
                     datos = json.load(f)
-            except Exception(FileNotFoundError, json.JSONDecodeError, KeyError):
+            except (FileNotFoundError, json.JSONDecodeError, KeyError):
                 datos = {"historial": []}
 
         datos["historial"].append(nueva_partida)
@@ -190,10 +214,10 @@ class SudokuModel:
         """Obtiene las 10 mejores puntuaciones filtradas por dificultad.
 
         Args:
-            dificultad (str): Nivel de dificultad a consultar.
+            dificultad (str): Nivel de dificultad a consultar[cite: 4].
 
         Returns:
-            list[dict]: Lista ordenada con los diez mejores registros.
+            list[dict]: Lista ordenada con los diez mejores registros[cite: 4].
         """
         if not os.path.exists(self.archivo_json):
             return []
@@ -204,17 +228,17 @@ class SudokuModel:
             filtrados = [p for p in historial if p["dificultad"] == dificultad and not p.get("resuelto_auto", False)]
             filtrados.sort(key=lambda x: (-x["puntaje"], x["tiempo_segundos"]))
             return filtrados[:10]
-        except Exception(FileNotFoundError, json.JSONDecodeError, KeyError):
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
             return []
 
     def obtener_estadisticas_personales(self, jugador):
         """Genera un resumen estadístico del desempeño de un jugador.
 
         Args:
-            jugador (str): Nombre del usuario a buscar.
+            jugador (str): Nombre del usuario a buscar[cite: 4].
 
         Returns:
-            dict | None: Diccionario con métricas personales o None si no hay partidas.
+            dict | None: Diccionario con métricas personales o None si no hay partidas[cite: 4].
         """
         if not os.path.exists(self.archivo_json):
             return None
@@ -238,19 +262,19 @@ class SudokuModel:
                 "mejor_tiempo": mejor_tiempo,
                 "promedio_errores": promedio_errores
             }
-        except Exception(FileNotFoundError, json.JSONDecodeError, KeyError, ZeroDivisionError):
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, ZeroDivisionError):
             return None
 
     def es_conflicto_visual(self, fila, col, num):
         """Comprueba si un valor causa un conflicto en fila, columna o bloque 3x3.
 
         Args:
-            fila (int): Fila de la celda.
-            col (int): Columna de la celda.
-            num (int): Número asignado.
+            fila (int): Fila de la celda[cite: 4].
+            col (int): Columna de la celda[cite: 4].
+            num (int): Número asignado[cite: 4].
 
         Returns:
-            str | None: Descripción de la regla infringida o None si es válido.
+            str | None: Descripción de la regla infringida o None si es válido[cite: 4].
         """
         for c in range(9):
             if c != col and self.matriz_juego[fila][c] == num:

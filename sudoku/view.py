@@ -251,6 +251,12 @@ class SudokuView(tk.Tk):
         self._colores_temporales = {}
         self._unidades_completas = set()
         self._animar_entrada = False
+        self.notas = {}
+        self.lienzos_notas = {}
+        self.modo_borrador = False
+        self.boton_borrador = None
+        self._teclas_borrador = set()
+        self._lado_celda = 0
         self.crear_interfaz_menu()
 
     @property
@@ -280,6 +286,11 @@ class SudokuView(tk.Tk):
         self._colores_temporales = {}
         self._unidades_completas = set()
         self._animar_entrada = False
+        self.notas = {}
+        self.lienzos_notas = {}
+        self.modo_borrador = False
+        self.boton_borrador = None
+        self._teclas_borrador = set()
 
     def volver_menu(self):
         """Detiene la partida en curso y regresa al menú principal."""
@@ -560,6 +571,7 @@ class SudokuView(tk.Tk):
         vcmd = (self.register(self.validar_entrada_celda), "%P")
         fuente_celda = tkfont.Font(family=FUENTE, size=18, weight="bold")
         lado = fuente_celda.metrics("linespace") + 8
+        self._lado_celda = lado
 
         for b_f in range(3):
             for b_c in range(3):
@@ -616,7 +628,29 @@ class SudokuView(tk.Tk):
                                 self._seleccionar_celda(fila, col)
                             ),
                         )
+                        entry.bind(
+                            "<KeyPress>",
+                            lambda event, fila=fila_real, col=col_real: (
+                                self._al_presionar_tecla(fila, col, event)
+                            ),
+                        )
                         self.celdas_ui[(fila_real, col_real)] = entry
+
+                        lienzo = tk.Canvas(
+                            marco,
+                            width=lado,
+                            height=lado,
+                            bg=p["celda"],
+                            highlightthickness=0,
+                            bd=0,
+                        )
+                        lienzo.bind(
+                            "<Button-1>",
+                            lambda event, fila=fila_real, col=col_real: (
+                                self._clic_notas(fila, col)
+                            ),
+                        )
+                        self.lienzos_notas[(fila_real, col_real)] = lienzo
 
         frame_acciones = tk.Frame(self, bg=p["fondo"], pady=10)
         frame_acciones.pack()
@@ -638,6 +672,18 @@ class SudokuView(tk.Tk):
                 alto=38,
                 tamano=10,
             ).grid(row=0, column=columna, padx=5)
+
+        self.boton_borrador = self._crear_boton(
+            frame_acciones,
+            "Borrador: OFF",
+            p["boton_neutro"],
+            self.alternar_borrador,
+            p["fondo"],
+            ancho=180,
+            alto=36,
+            tamano=10,
+        )
+        self.boton_borrador.grid(row=1, column=0, columnspan=4, pady=(8, 0))
 
     @staticmethod
     def _celdas_de_unidad(tipo, indice):
@@ -717,6 +763,7 @@ class SudokuView(tk.Tk):
                 fg=p["fondo"],
                 disabledforeground=p["fondo"],
             )
+            self._dibujar_notas(f, c, p["fondo"])
             return
 
         fondo = self._colores_temporales.get((f, c))
@@ -729,6 +776,7 @@ class SudokuView(tk.Tk):
             fg=texto,
             disabledforeground=p["texto"],
         )
+        self._dibujar_notas(f, c, fondo)
 
     def _repintar_tablero(self):
         """Aplica los colores de resaltado y de error a todas las celdas."""
@@ -756,14 +804,155 @@ class SudokuView(tk.Tk):
             col (int): Columna de la celda donde se soltó la tecla.
             event: Evento de teclado de Tkinter (<KeyRelease>).
         """
+        if event.keysym in self._teclas_borrador:
+            self._teclas_borrador.discard(event.keysym)
+            return
         if event.keysym in ("BackSpace", "Delete") or event.char.isdigit():
             self._despues(1, self._tras_modificar)
             self.controlador.modificar_celda(fila, col, event)
 
     def _tras_modificar(self):
-        """Actualiza el resaltado y revisa si se completó alguna unidad."""
+        """Limpia notas obsoletas, actualiza el resaltado y revisa unidades."""
+        if self.celda_activa is not None:
+            self._depurar_notas(*self.celda_activa)
         self._repintar_tablero()
         self._revisar_unidades(animar=True)
+
+    def alternar_borrador(self):
+        """Activa o desactiva el modo borrador (notas de candidatos)."""
+        self.modo_borrador = not self.modo_borrador
+        p = self.paleta
+        if self.boton_borrador is not None and self.boton_borrador.winfo_exists():
+            self.boton_borrador.texto = (
+                "Borrador: ON" if self.modo_borrador else "Borrador: OFF"
+            )
+            self.boton_borrador.color = (
+                p["acento"] if self.modo_borrador else p["boton_neutro"]
+            )
+            self.boton_borrador._dibujar()
+        entry = self.celdas_ui.get(self.celda_activa)
+        if entry is not None:
+            entry.focus_set()
+
+    def _al_presionar_tecla(self, fila, col, event):
+        """Intercepta los dígitos en modo borrador para anotarlos como notas.
+
+        En modo borrador, un dígito del 1 al 9 alterna esa nota en la celda
+        (solo si está vacía) y no se escribe como valor. Borrar en una celda
+        vacía elimina todas sus notas.
+
+        Args:
+            fila (int): Fila de la celda donde se presionó la tecla.
+            col (int): Columna de la celda donde se presionó la tecla.
+            event: Evento de teclado de Tkinter (<KeyPress>).
+
+        Returns:
+            str | None: "break" si la tecla se consumió como nota.
+        """
+        celda = (fila, col)
+        if not self.modo_borrador or celda in self.celdas_fijas:
+            return None
+        entry = self.celdas_ui[celda]
+        es_digito = len(event.char) == 1 and event.char in "123456789"
+        es_borrar = event.keysym in ("BackSpace", "Delete")
+
+        if es_digito:
+            if not entry.get():
+                self._alternar_nota(celda, int(event.char))
+            self._teclas_borrador.add(event.keysym)
+            return "break"
+        if es_borrar and not entry.get():
+            self.notas.pop(celda, None)
+            self._pintar_celda(fila, col)
+            self._teclas_borrador.add(event.keysym)
+            return "break"
+        return None
+
+    def _alternar_nota(self, celda, numero):
+        """Agrega la nota si no existe en la celda o la quita si ya estaba.
+
+        Args:
+            celda (tuple[int, int]): Coordenadas (fila, columna) de la celda.
+            numero (int): Candidato del 1 al 9.
+        """
+        notas = self.notas.setdefault(celda, set())
+        if numero in notas:
+            notas.discard(numero)
+        else:
+            notas.add(numero)
+        if not notas:
+            del self.notas[celda]
+        self._pintar_celda(*celda)
+
+    def _clic_notas(self, fila, col):
+        """Pasa el clic del lienzo de notas a la celda que cubre.
+
+        Args:
+            fila (int): Fila de la celda.
+            col (int): Columna de la celda.
+        """
+        self.celdas_ui[(fila, col)].focus_set()
+        self._seleccionar_celda(fila, col)
+
+    def _dibujar_notas(self, f, c, fondo):
+        """Dibuja las notas de una celda en una cuadrícula de 3x3.
+
+        Las notas solo se muestran si la celda está vacía y visible.
+
+        Args:
+            f (int): Fila de la celda.
+            c (int): Columna de la celda.
+            fondo (str): Color de fondo actual de la celda.
+        """
+        lienzo = self.lienzos_notas.get((f, c))
+        entry = self.celdas_ui.get((f, c))
+        if lienzo is None or entry is None or not lienzo.winfo_exists():
+            return
+        notas = self.notas.get((f, c))
+        if not notas or entry.get() or (f, c) in self._ocultas:
+            lienzo.place_forget()
+            return
+
+        lienzo.config(bg=fondo)
+        lienzo.delete("all")
+        paso = self._lado_celda / 3
+        for numero in sorted(notas):
+            fila_n, col_n = divmod(numero - 1, 3)
+            lienzo.create_text(
+                (col_n + 0.5) * paso,
+                (fila_n + 0.5) * paso,
+                text=str(numero),
+                fill=self.paleta["acento"],
+                font=(FUENTE, 7, "bold"),
+            )
+        lienzo.place(x=0, y=0, relwidth=1, relheight=1)
+
+    def _depurar_notas(self, f, c):
+        """Quita las notas de una celda con valor y las del mismo número.
+
+        Si la celda (f, c) tiene un dígito, se borran sus notas y ese dígito
+        se elimina de las notas de su fila, columna y bloque.
+
+        Args:
+            f (int): Fila de la celda.
+            c (int): Columna de la celda.
+        """
+        valor = self.celdas_ui[(f, c)].get()
+        if not valor:
+            return
+        self.notas.pop((f, c), None)
+        numero = int(valor)
+        relacionadas = set(
+            self._celdas_de_unidad("f", f)
+            + self._celdas_de_unidad("c", c)
+            + self._celdas_de_unidad("b", 3 * (f // 3) + c // 3)
+        )
+        for celda in relacionadas:
+            notas = self.notas.get(celda)
+            if notas and numero in notas:
+                notas.discard(numero)
+                if not notas:
+                    del self.notas[celda]
 
     def _unidades_completas_ahora(self):
         """Calcula qué filas, columnas y bloques están completos y válidos.
@@ -907,6 +1096,7 @@ class SudokuView(tk.Tk):
             entry.delete(0, tk.END)
             if valor != 0:
                 entry.insert(0, str(valor))
+                self.notas.pop((f, c), None)
 
             if matriz_pistas[f][c]:
                 self.celdas_fijas.add((f, c))
